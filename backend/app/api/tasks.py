@@ -8,8 +8,9 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 
 from app.api.login import get_current_user
 from app.models.user import User
-from app.models.task import Task, TaskCreate, TaskUpdate, TaskResponse
+from app.models.task import Task, TaskCreate, TaskUpdate, TaskResponse, TaskDetailResponse
 from app.services.task_service import TaskService
+from app.services.document_service import document_service
 
 router = APIRouter()
 
@@ -32,12 +33,14 @@ async def get_tasks(
     
     return tasks
 
-@router.get("/tasks/{task_id}", response_model=TaskResponse)
+@router.get("/tasks/{task_id}", response_model=TaskDetailResponse)
 async def get_task(
     task_id: str,
     current_user: User = Depends(get_current_user)
 ):
-    """Get a specific task by ID."""
+    """
+    Get a specific task by ID with detailed information including associated documents.
+    """
     # Create task service
     task_service = TaskService()
     
@@ -50,7 +53,16 @@ async def get_task(
             detail=f"Task with ID {task_id} not found"
         )
     
-    return task
+    # Get associated documents
+    documents = await document_service.get_documents_by_ids(task.documents)
+    
+    # Create detailed response
+    detailed_task = TaskDetailResponse(
+        **task.model_dump(),
+        document_details=documents
+    )
+    
+    return detailed_task
 
 @router.post("/tasks", response_model=TaskResponse, status_code=status.HTTP_201_CREATED)
 async def create_task(

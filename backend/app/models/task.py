@@ -7,6 +7,8 @@ from typing import List, Optional
 from pydantic import BaseModel, Field
 from enum import Enum
 
+from app.models.document import Document, DocumentResponse
+
 class TaskStatus(str, Enum):
     """Enum for task status."""
     NOT_STARTED = "Not Started"
@@ -50,3 +52,10 @@ class TaskUpdate(BaseModel):
 class TaskResponse(Task):
     """Task model for API responses."""
     pass
+
+class TaskDetailResponse(Task):
+    """Detailed task model for API responses with document details."""
+    document_details: List[DocumentResponse] = Field(
+        default_factory=list, 
+        description="Detailed information about associated documents"
+    )
