@@ -1,17 +1,72 @@
 This is a placeholder for a Word template (docx) file.
 
-In a real implementation, this would be a properly formatted .docx template with placeholders for:
+In a real implementation, this would be a properly formatted .docx template with the following structure:
 
-- Client name: {{ client_name }}
-- Project ID: {{ project_id }}
-- Date: {{ date }}
-- Prepared by: {{ prepared_by }}
-- Tax year: {{ tax_year }}
-- Services: {{ services }}
-- Key findings: {{ key_findings }}
-- Recommendations: {{ recommendations }}
-- Financial highlights: {{ financial_highlights }}
+-----------------------------------------------------
+TAX ENGAGEMENT CLIENT SUMMARY
+-----------------------------------------------------
+
+CLIENT INFORMATION:
+Client Name: {{ client_name }}
+Project ID: {{ project_id }}
+Tax Year: {{ tax_year }}
+Date Prepared: {{ date }}
+Prepared By: {{ prepared_by }}
+
+SERVICES PROVIDED:
+{% for service in services %}
+- {{ service }}
+{% endfor %}
+
+KEY FINDINGS:
+{% for finding in key_findings %}
+- {{ finding }}
+{% endfor %}
+
+FINANCIAL HIGHLIGHTS:
+Revenue: ${{ '{:,.2f}'.format(financial_highlights.revenue) }}
+Expenses: ${{ '{:,.2f}'.format(financial_highlights.expenses) }}
+Net Income: ${{ '{:,.2f}'.format(financial_highlights.net_income) }}
+Tax Liability: ${{ '{:,.2f}'.format(financial_highlights.tax_liability) }}
+
+Year-over-Year Comparison:
+- Revenue: {{ financial_highlights.comparison.revenueChange }}% change
+- Expenses: {{ financial_highlights.comparison.expensesChange }}% change
+- Net Income: {{ financial_highlights.comparison.netIncomeChange }}% change
+- Tax Liability: {{ financial_highlights.comparison.taxLiabilityChange }}% change
+
+Additional Financial Notes:
+{% for note in financial_highlights.additional_notes %}
+- {{ note }}
+{% endfor %}
+
+TAX DEDUCTIONS:
+{% for deduction in tax_deductions %}
+- {{ deduction }}
+{% endfor %}
+
+TAX CREDITS:
+{% for credit in tax_credits %}
+- {{ credit }}
+{% endfor %}
+
+RECOMMENDATIONS:
+{% for recommendation in recommendations %}
+- {{ recommendation }}
+{% endfor %}
+
+UPCOMING DEADLINES:
+{% for deadline in upcoming_deadlines %}
+- {{ deadline }}
+{% endfor %}
+
+-----------------------------------------------------
+
+Note: This document summarizes key tax engagement findings and recommendations. 
+For detailed analysis, please refer to the full tax return and supporting documentation.
+
+-----------------------------------------------------
 
 Since we can't create a binary .docx file directly here, you'll need to create a proper Word template with these placeholders and save it as 'client_summary_template.docx' in this directory.
 
-For the docxtpl library to work, the placeholders should be in the format {{ variable_name }}.
+For the docxtpl library to work, the placeholders should be in the format {{ variable_name }} and the for loops in the format {% for item in items %}...{% endfor %}.

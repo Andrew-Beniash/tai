@@ -1,0 +1,55 @@
+{
+  "projectId": "001",
+  "clientName": "Acme Corp",
+  "summaryData": {
+    "taxYear": 2024,
+    "services": ["Corporate Tax Filing", "Tax Planning"],
+    "keyFindings": [
+      "All required tax forms are included",
+      "Potential deduction opportunities in equipment purchases",
+      "Reconciliation completed for all financial statements",
+      "Tax liability reduced by 5.3% compared to previous year"
+    ],
+    "recommendations": [
+      "Consider quarterly tax payments for next year",
+      "Review equipment depreciation schedule",
+      "Implement tax planning strategy for international operations",
+      "Evaluate R&D tax credit opportunities for upcoming projects"
+    ],
+    "financialHighlights": {
+      "revenue": 1250000,
+      "expenses": 850000,
+      "netIncome": 400000,
+      "taxLiability": 84000,
+      "comparisonWithLastYear": {
+        "revenueChange": 15.2,
+        "expensesChange": 12.1,
+        "netIncomeChange": 22.5,
+        "taxLiabilityChange": -5.3
+      },
+      "additionalNotes": [
+        "Revenue increased due to new product line",
+        "Expenses include one-time facility upgrade",
+        "Net income improved due to better operational efficiency",
+        "Effective tax rate decreased from 22% to 21%"
+      ]
+    },
+    "taxDeductions": [
+      "R&D investments: $120,000",
+      "Equipment purchases: $75,000",
+      "Charitable contributions: $25,000",
+      "Employee benefit programs: $85,000"
+    ],
+    "taxCredits": [
+      "Research and development tax credit: $25,000",
+      "Work opportunity tax credit: $12,000",
+      "Foreign tax credit: $8,500"
+    ],
+    "upcomingDeadlines": [
+      "Q1 Estimated Tax Payment: April 15, 2025",
+      "Q2 Estimated Tax Payment: June 15, 2025",
+      "Q3 Estimated Tax Payment: September 15, 2025",
+      "Filing Extension Deadline: October 15, 2025"
+    ]
+  }
+}
