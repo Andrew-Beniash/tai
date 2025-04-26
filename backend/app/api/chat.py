@@ -23,7 +23,6 @@ router = APIRouter()
 class ChatMessageRequest(BaseModel):
     """Model for chat message request."""
     message: str
-    taskId: str
 
 class ChatAction(BaseModel):
     """Model for an action suggested by the AI."""
@@ -34,8 +33,10 @@ class ChatAction(BaseModel):
 
 class ChatMessageResponse(BaseModel):
     """Model for chat message response."""
-    message: str
+    response: str  # Changed from 'message' to 'response' to match frontend
+    suggestedActionId: Optional[str] = None  # Added for frontend compatibility
     suggested_actions: Optional[List[ChatAction]] = None
+    documentIds: Optional[List[str]] = None  # Added for frontend compatibility
     references: Optional[List[Dict[str, str]]] = None
 
 # Endpoints
@@ -62,11 +63,26 @@ async def post_chat_message(
         logger.info(f"Found {len(documents)} documents for task {task_id}")
         
         # Process message with AI service
-        response = await ai_service.process_message(
+        ai_response = await ai_service.process_message(
             message=request.message,
             task=task,
             documents=documents
         )
+        
+        # Transform response to match frontend expectations
+        response = {
+            "response": ai_response["message"],
+            "suggested_actions": ai_response["suggested_actions"],
+            "references": ai_response["references"],
+        }
+        
+        # Add suggestedActionId if available (first action's ID)
+        if ai_response["suggested_actions"] and len(ai_response["suggested_actions"]) > 0:
+            response["suggestedActionId"] = ai_response["suggested_actions"][0]["action_id"]
+        
+        # Add document IDs if available
+        if documents:
+            response["documentIds"] = [doc.doc_id for doc in documents]
         
         return response
     

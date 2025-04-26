@@ -14,13 +14,24 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         # Parse request body
         req_body = req.get_json()
         task_id = req_body.get('taskId')
-        client_name = req_body.get('clientName')
-        missing_items = req_body.get('missingItems', [])
+        client = req_body.get('client')
+        tax_form = req_body.get('taxForm')
+        params = req_body.get('params', {})
+        
+        # Get specific parameters or use defaults
+        client_name = params.get('client_name', client)
+        missing_items = params.get('missing_items', [
+            "Prior year tax returns",
+            "Business financial statements",
+            "Details of new assets purchased during the tax year",
+            "Documentation for any new loans or financing arrangements",
+            "Updated officer/shareholder information"
+        ])
         
         # Validate input
-        if not task_id or not client_name or not missing_items:
+        if not task_id or not client_name:
             return func.HttpResponse(
-                json.dumps({"error": "Missing required parameters: taskId, clientName, or missingItems"}),
+                json.dumps({"error": "Missing required parameters: taskId or client name"}),
                 status_code=400,
                 mimetype="application/json"
             )
@@ -40,6 +51,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
                 'client_name': client_name,
                 'date': datetime.now().strftime("%B %d, %Y"),
                 'task_id': task_id,
+                'tax_form': tax_form,
                 'missing_items': missing_items,
                 'preparer_name': "Jeff (Preparer)",  # Hardcoded for prototype
             }

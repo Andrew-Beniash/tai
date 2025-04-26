@@ -1,74 +1,75 @@
 /**
- * Session utility functions
- * Helper functions for session management in the frontend
+ * Session utilities for managing user authentication
  */
 
-import { User } from '../api/auth';
-
-// Constants for localStorage keys
-const USER_KEY = 'user';
-const TOKEN_KEY = 'token';
+// Local storage keys
+const TOKEN_KEY = 'ai_tax_auth_token';
+const USER_KEY = 'ai_tax_current_user';
 
 /**
- * Save user to localStorage
+ * Save authentication token to local storage
  * 
- * @param user User object to save
+ * @param token - JWT token from login response
  */
-export const saveUser = (user: User): void => {
+export const saveAuthToken = (token: string): void => {
+  localStorage.setItem(TOKEN_KEY, token);
+};
+
+/**
+ * Get authentication token from local storage
+ * 
+ * @returns Stored token or empty string if not found
+ */
+export const getAuthToken = (): string => {
+  return localStorage.getItem(TOKEN_KEY) || '';
+};
+
+/**
+ * Clear authentication token from local storage
+ */
+export const clearAuthToken = (): void => {
+  localStorage.removeItem(TOKEN_KEY);
+};
+
+/**
+ * Save current user info to local storage
+ * 
+ * @param user - User object from login response
+ */
+export const saveCurrentUser = (user: any): void => {
   localStorage.setItem(USER_KEY, JSON.stringify(user));
 };
 
 /**
- * Get user from localStorage
+ * Get current user info from local storage
  * 
- * @returns User object or null if not found
+ * @returns Stored user object or null if not found
  */
-export const getUser = (): User | null => {
+export const getCurrentUser = (): any => {
   const userJson = localStorage.getItem(USER_KEY);
   return userJson ? JSON.parse(userJson) : null;
 };
 
 /**
- * Save token to localStorage
- * 
- * @param token JWT token to save
+ * Clear current user info from local storage
  */
-export const saveToken = (token: string): void => {
-  localStorage.setItem(TOKEN_KEY, token);
-};
-
-/**
- * Get token from localStorage
- * 
- * @returns JWT token or null if not found
- */
-export const getToken = (): string | null => {
-  return localStorage.getItem(TOKEN_KEY);
-};
-
-/**
- * Clear all session data from localStorage
- */
-export const clearSession = (): void => {
+export const clearCurrentUser = (): void => {
   localStorage.removeItem(USER_KEY);
-  localStorage.removeItem(TOKEN_KEY);
 };
 
 /**
- * Check if user is authenticated
+ * Check if user is logged in
  * 
- * @returns True if user is authenticated, false otherwise
+ * @returns Boolean indicating whether user is logged in
  */
-export const isAuthenticated = (): boolean => {
-  return !!getUser();
+export const isLoggedIn = (): boolean => {
+  return !!getAuthToken() && !!getCurrentUser();
 };
 
 /**
- * Get authentication headers for API requests
- * 
- * @returns Headers object with Authorization header if token exists
+ * Logout user by clearing all session data
  */
-export const getAuthHeaders = (): Record<string, string> => {
-  const token = getToken();
-  return token ? { Authorization: `Bearer ${token}` } : {};
+export const logout = (): void => {
+  clearAuthToken();
+  clearCurrentUser();
 };
