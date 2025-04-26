@@ -2,12 +2,13 @@
 AI Service to handle interaction with OpenAI API.
 Provides methods for generating AI responses based on task context,
 document content, and user messages.
-Integrates document content from Google Drive.
+Integrates with the RAG service for enhanced context assembly.
 """
 
 import logging
 import json
 from typing import List, Dict, Any, Optional
+from datetime import datetime
 
 from app.core.config import settings
 from app.core.openai_client import get_openai_client
@@ -15,6 +16,7 @@ from app.models.task import TaskResponse
 from app.models.document import Document, DocumentResponse
 from app.utils.prompt_builder import build_prompt, build_rag_context
 from app.utils.text_utils import extract_actions_from_response
+from app.services.rag_service import rag_service
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -82,11 +84,12 @@ class AIService:
         logger.info(f"Processing message with AI for task {task.task_id}")
         
         try:
-            # Build prompt with context
-            system_prompt, user_prompt = await build_prompt(message, task, documents)
-            
-            # If we have pre-fetched document context, use it
+            # Check if we're using pre-fetched document context or building a new one
             if document_context:
+                # Use the RAG service to build system prompt
+                system_prompt = await self._build_system_prompt_for_task(task)
+                
+                # Use the pre-fetched document context for user prompt
                 user_prompt = f"""
 User Question: {message}
 
@@ -95,6 +98,11 @@ Document Context:
 
 Please provide a helpful response based on the available information.
 """
+            else:
+                # Build both prompts using the RAG service
+                system_prompt, user_prompt = await rag_service.build_prompt_with_context(
+                    task.task_id, message
+                )
             
             logger.debug(f"System prompt: {system_prompt[:100]}...")
             logger.debug(f"User prompt: {user_prompt[:100]}...")
@@ -128,8 +136,8 @@ Please provide a helpful response based on the available information.
                     "source": doc.file_name,
                     "id": doc.doc_id,
                     "type": doc.file_type,
-                    "last_modified": doc.last_modified.isoformat() if doc.last_modified else None,
-                    "web_view_link": doc.web_view_link
+                    "last_modified": doc.last_modified.isoformat() if hasattr(doc, 'last_modified') and doc.last_modified else None,
+                    "web_view_link": doc.web_view_link if hasattr(doc, 'web_view_link') else None
                 })
             
             # Return formatted response
@@ -147,7 +155,7 @@ Please provide a helpful response based on the available information.
         self,
         task_id: str,
         question: str,
-        document_context: str
+        document_context: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Perform document analysis with AI based on a specific question.
@@ -155,7 +163,7 @@ Please provide a helpful response based on the available information.
         Args:
             task_id: The task ID
             question: The analysis question
-            document_context: Document content context
+            document_context: Optional pre-fetched document context
             
         Returns:
             Dict containing AI analysis and insights
@@ -163,6 +171,11 @@ Please provide a helpful response based on the available information.
         logger.info(f"Analyzing documents for task {task_id}")
         
         try:
+            # Use RAG service to get task context and build document context if not provided
+            if not document_context:
+                # Generate document context using RAG
+                document_context = await build_rag_context(task_id, question)
+            
             # Build system prompt for document analysis
             system_prompt = """
 You are an AI Tax Assistant specializing in document analysis. Your task is to analyze
@@ -226,6 +239,52 @@ Please provide a detailed analysis based on these documents.
         # Get questions based on tax form type
         form_type = task.tax_form if task.tax_form in self.preset_questions else "default"
         return self.preset_questions[form_type]
+    
+    async def _build_system_prompt_for_task(self, task: TaskResponse) -> str:
+        """
+        Build a system prompt for a specific task.
+        
+        Args:
+            task: The task to build the prompt for
+            
+        Returns:
+            System prompt for the AI
+        """
+        # Current date information for context
+        current_time = datetime.now()
+        current_year = current_time.year
+        tax_filing_year = current_year - 1  # Typically filing for previous year
+        
+        system_prompt = f"""
+You are an AI Tax Assistant helping preparers and reviewers complete tax projects.
+You have access to project documents, prior year returns, financials, and client information.
+
+Current context:
+- Task: {task.task_id} - {task.title} ({task.status})
+- Client: {task.client}
+- Tax Form: {task.tax_form}
+- Assigned to: {task.assigned_to}
+
+Current year: {current_year}
+Tax filing year being prepared: {tax_filing_year}
+
+When providing answers:
+1. Reference specific documents when possible
+2. Be clear about what information might be missing
+3. Suggest appropriate actions when helpful
+4. Use professional tax terminology
+5. If you suggest an action, format it as "Action: [action name]"
+
+Available actions you can suggest:
+- Generate Missing Information Letter
+- Trigger Risk Review
+- Generate Client Summary
+- Send to Tax Review
+
+Only suggest actions when they are appropriate based on the user's question and task context.
+"""
+        
+        return system_prompt
 
 # Create global service instance
 ai_service = AIService()
