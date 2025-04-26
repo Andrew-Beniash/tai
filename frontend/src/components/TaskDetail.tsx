@@ -1,15 +1,44 @@
 /**
  * TaskDetail component
- * Displays detailed information about a task
+ * Displays detailed information about a task including metadata and associated documents
+ * Allows viewing/downloading of project documents from Google Drive
  */
 
+import { useState } from 'react';
 import { Task } from '../api/tasks';
 
 interface TaskDetailProps {
   task: Task;
 }
 
+// Document types to appropriate icons mapping
+const FILE_ICON_MAP: Record<string, JSX.Element> = {
+  pdf: (
+    <svg className="flex-shrink-0 h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+      <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
+    </svg>
+  ),
+  docx: (
+    <svg className="flex-shrink-0 h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+      <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
+    </svg>
+  ),
+  xlsx: (
+    <svg className="flex-shrink-0 h-5 w-5 text-green-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+      <path fillRule="evenodd" d="M5 4a1 1 0 00-1 1v10a1 1 0 001 1h10a1 1 0 001-1V5a1 1 0 00-1-1H5zm6 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+    </svg>
+  ),
+  // Default file icon
+  default: (
+    <svg className="flex-shrink-0 h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+      <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
+    </svg>
+  )
+};
+
 export default function TaskDetail({ task }: TaskDetailProps) {
+  const [selectedDocumentUrl, setSelectedDocumentUrl] = useState<string | null>(null);
+  
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -47,16 +76,46 @@ export default function TaskDetail({ task }: TaskDetailProps) {
         return 'bg-gray-100 text-gray-800';
     }
   };
+  
+  // Helper function to get file type icon
+  const getFileIcon = (fileName: string) => {
+    const extension = fileName.split('.').pop()?.toLowerCase() || 'default';
+    return FILE_ICON_MAP[extension] || FILE_ICON_MAP.default;
+  };
+  
+  // Helper function to view a document
+  const viewDocument = (doc: any) => {
+    const url = doc.web_view_link || `https://drive.google.com/file/d/${doc.drive_file_id}/view`;
+    setSelectedDocumentUrl(url);
+    window.open(url, '_blank');
+  };
+  
+  // Helper to format file size
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return bytes + ' B';
+    else if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    else if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    else return (bytes / (1024 * 1024 * 1024)).toFixed(1) + ' GB';
+  };
 
   return (
     <div className="bg-white shadow overflow-hidden sm:rounded-lg">
       <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
-        <h3 className="text-lg leading-6 font-medium text-gray-900">
-          {task.description || `Task ${task.task_id}`}
-        </h3>
-        <p className="mt-1 max-w-2xl text-sm text-gray-500">
-          Task details and information
-        </p>
+        <div className="flex justify-between items-center">
+          <div>
+            <h3 className="text-lg leading-6 font-medium text-gray-900">
+              {task.description || `Task ${task.task_id}`}
+            </h3>
+            <p className="mt-1 max-w-2xl text-sm text-gray-500">
+              Task details and associated documents
+            </p>
+          </div>
+          <div>
+            <span className={`px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full ${getStatusColor(task.status)}`}>
+              {task.status}
+            </span>
+          </div>
+        </div>
       </div>
       
       <div className="border-b border-gray-200">
@@ -108,8 +167,8 @@ export default function TaskDetail({ task }: TaskDetailProps) {
               Priority
             </dt>
             <dd className="mt-1 sm:mt-0 sm:col-span-2">
-              <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getPriorityColor(task.priority)}`}>
-                {task.priority}
+              <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getPriorityColor(task.priority || 'medium')}`}>
+                {task.priority || 'Medium'}
               </span>
             </dd>
           </div>
@@ -131,37 +190,70 @@ export default function TaskDetail({ task }: TaskDetailProps) {
           </div>
           
           {/* Associated Documents */}
-          <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-            <dt className="text-sm font-medium text-gray-500">
-              Associated Documents
-            </dt>
-            <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+          <div className="bg-gray-50 px-4 py-5 sm:px-6">
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="text-sm font-medium text-gray-500">
+                Associated Documents
+              </h3>
+            </div>
+            <div className="mt-1 text-sm text-gray-900 sm:mt-0">
               <ul className="border border-gray-200 rounded-md divide-y divide-gray-200">
                 {task.documents && task.documents.length > 0 ? (
-                  task.documents.map((doc: any, index: number) => (
-                    <li key={index} className="pl-3 pr-4 py-3 flex items-center justify-between text-sm">
-                      <div className="w-0 flex-1 flex items-center">
-                        <svg className="flex-shrink-0 h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
-                        </svg>
-                        <span className="ml-2 flex-1 w-0 truncate">
-                          {doc.fileName || doc.name || `Document ${doc.docId || doc}`}
-                        </span>
-                      </div>
-                      <div className="ml-4 flex-shrink-0">
-                        <a href="#" className="font-medium text-blue-600 hover:text-blue-500">
-                          View
-                        </a>
-                      </div>
-                    </li>
-                  ))
+                  task.documents.map((doc: any, index: number) => {
+                    // Determine document properties based on structure
+                    const docId = doc.doc_id || doc.docId || doc;
+                    const fileName = doc.file_name || doc.fileName || doc.name || `Document ${docId}`;
+                    const fileType = doc.file_type || doc.fileType || fileName.split('.').pop() || 'unknown';
+                    const fileSize = doc.size_bytes || doc.sizeBytes || null;
+                    const description = doc.description || '';
+                    const lastModified = doc.last_modified || doc.lastModified || '';
+                    
+                    return (
+                      <li key={index} className="px-3 py-3 flex items-center justify-between text-sm hover:bg-gray-50">
+                        <div className="w-0 flex-1 flex items-center">
+                          {getFileIcon(fileName)}
+                          <div className="ml-2 flex-1 w-0">
+                            <div className="font-medium truncate">{fileName}</div>
+                            {description && (
+                              <div className="text-gray-500 text-xs">{description}</div>
+                            )}
+                            <div className="text-gray-500 text-xs mt-1 flex">
+                              {fileSize && (
+                                <span className="mr-3">{formatFileSize(fileSize)}</span>
+                              )}
+                              {lastModified && (
+                                <span>Modified: {new Date(lastModified).toLocaleDateString()}</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="ml-4 flex-shrink-0 flex">
+                          <button
+                            onClick={() => viewDocument(doc)}
+                            className="font-medium text-blue-600 hover:text-blue-500 mr-3"
+                          >
+                            View
+                          </button>
+                          <a 
+                            href={doc.web_view_link || `https://drive.google.com/file/d/${doc.drive_file_id}/view`}
+                            download
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-medium text-blue-600 hover:text-blue-500"
+                          >
+                            Download
+                          </a>
+                        </div>
+                      </li>
+                    );
+                  })
                 ) : (
                   <li className="pl-3 pr-4 py-3 text-sm text-gray-500">
                     No documents associated with this task.
                   </li>
                 )}
               </ul>
-            </dd>
+            </div>
           </div>
         </dl>
       </div>

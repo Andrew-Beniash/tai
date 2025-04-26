@@ -12,6 +12,7 @@ import TaskList from '../components/TaskList';
 
 export default function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [allTasks, setAllTasks] = useState<Task[]>([]);
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -41,6 +42,7 @@ export default function TasksPage() {
         
         // Then get tasks for this project
         const tasksData = await getTasks(projectId);
+        setAllTasks(tasksData);
         
         // Filter tasks assigned to the current user
         const filteredTasks = tasksData.filter(task => 
@@ -113,6 +115,12 @@ export default function TasksPage() {
               <div className="mt-1 text-sm text-gray-500">
                 <span className="font-medium">Clients:</span> {project.clients.join(', ')} | 
                 <span className="font-medium ml-2">Services:</span> {project.services.join(', ')}
+              </div>
+            )}
+            {user && !loading && allTasks.length > 0 && (
+              <div className="mt-2 p-2 bg-blue-50 text-blue-800 text-sm rounded">
+                <span className="font-medium">Note:</span> Showing {tasks.length} task(s) assigned to {user.name} as {user.role}
+                {tasks.length !== allTasks.length && ` (${allTasks.length - tasks.length} other tasks exist for this project)`}
               </div>
             )}
           </div>

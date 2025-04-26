@@ -13,10 +13,15 @@ interface ChatWidgetProps {
 }
 
 interface ChatMessage {
-  sender: 'user' | 'ai';
+  sender: 'user' | 'ai' | 'system';
   content: string;
   timestamp: Date;
   suggestedActionId?: string;
+  actionResult?: {
+    success: boolean;
+    message: string;
+    documentUrl?: string;
+  };
 }
 
 export default function ChatWidget({ taskId }: ChatWidgetProps) {
@@ -25,17 +30,22 @@ export default function ChatWidget({ taskId }: ChatWidgetProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [presetQuestions, setPresetQuestions] = useState<string[]>([]);
+  const [loadingQuestions, setLoadingQuestions] = useState(true);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
   
   // Fetch preset questions when component mounts
   useEffect(() => {
     const fetchPresetQuestions = async () => {
       try {
+        setLoadingQuestions(true);
         const questions = await getPresetQuestions(taskId);
         setPresetQuestions(questions);
       } catch (err) {
         console.error('Error fetching preset questions:', err);
+      } finally {
+        setLoadingQuestions(false);
       }
     };
     
@@ -117,21 +127,41 @@ export default function ChatWidget({ taskId }: ChatWidgetProps) {
       
       const result = await executeAction(taskId, actionRequest);
       
-      if (result.success) {
-        // Add a system message about the successful action
-        const systemMessage: ChatMessage = {
-          sender: 'ai',
-          content: `✅ Action completed successfully: ${result.message}`,
-          timestamp: new Date(),
-        };
-        
-        setMessages(prev => [...prev, systemMessage]);
-      } else {
+      // Create a system message about the action result
+      const systemMessage: ChatMessage = {
+        sender: 'system',
+        content: result.success 
+          ? `✅ Action completed successfully: ${result.message}` 
+          : `❌ Action failed: ${result.message}`,
+        timestamp: new Date(),
+        actionResult: {
+          success: result.success,
+          message: result.message,
+          documentUrl: result.result?.documentUrl || result.result?.fileUrl
+        }
+      };
+      
+      setMessages(prev => [...prev, systemMessage]);
+      
+      if (!result.success) {
         setError(`Action failed: ${result.message}`);
       }
     } catch (err) {
       setError('Failed to execute action. Please try again.');
       console.error('Error executing action:', err);
+      
+      // Add error message to chat
+      const errorMessage: ChatMessage = {
+        sender: 'system',
+        content: '❌ There was an error executing the action. Please try again.',
+        timestamp: new Date(),
+        actionResult: {
+          success: false,
+          message: 'Network or server error'
+        }
+      };
+      
+      setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
     }
@@ -139,18 +169,54 @@ export default function ChatWidget({ taskId }: ChatWidgetProps) {
   
   // Function to render chat message based on type
   const renderMessage = (message: ChatMessage, index: number) => {
+    // User message styling
     if (message.sender === 'user') {
       return (
         <div key={index} className="flex justify-end mb-4">
           <div className="bg-blue-600 text-white rounded-lg py-2 px-4 max-w-md">
-            <p>{message.content}</p>
+            <p className="whitespace-pre-wrap">{message.content}</p>
             <p className="text-xs text-blue-200 mt-1 text-right">
               {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </p>
           </div>
         </div>
       );
-    } else {
+    }
+    // System message styling (for action results)
+    else if (message.sender === 'system') {
+      return (
+        <div key={index} className="flex justify-center mb-4">
+          <div className={`rounded-lg py-2 px-4 max-w-md ${
+            message.actionResult?.success 
+              ? 'bg-green-100 border border-green-300 text-green-800' 
+              : 'bg-red-100 border border-red-300 text-red-800'
+          }`}>
+            <p className="whitespace-pre-wrap">{message.content}</p>
+            
+            {/* Document link if available */}
+            {message.actionResult?.documentUrl && (
+              <a 
+                href={message.actionResult.documentUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-800"
+              >
+                <svg className="h-4 w-4 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+                View Generated Document
+              </a>
+            )}
+            
+            <p className="text-xs text-gray-500 mt-1 text-right">
+              {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </p>
+          </div>
+        </div>
+      );
+    }
+    // AI message styling
+    else {
       return (
         <div key={index} className="flex justify-start mb-4">
           <div className="bg-gray-200 rounded-lg py-2 px-4 max-w-md">
@@ -163,7 +229,22 @@ export default function ChatWidget({ taskId }: ChatWidgetProps) {
                 className="mt-2 inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                 disabled={isLoading}
               >
-                {isLoading ? 'Processing...' : 'Execute Suggested Action'}
+                {isLoading ? (
+                  <span className="flex items-center">
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Processing...
+                  </span>
+                ) : (
+                  <span className="flex items-center">
+                    <svg className="mr-1.5 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    Execute Suggested Action
+                  </span>
+                )}
               </button>
             )}
             
@@ -179,7 +260,10 @@ export default function ChatWidget({ taskId }: ChatWidgetProps) {
   return (
     <div className="flex flex-col bg-white rounded-lg shadow">
       {/* Chat Messages */}
-      <div className="flex-1 p-4 overflow-y-auto h-80 border border-gray-200 rounded-t-lg">
+      <div 
+        ref={chatContainerRef}
+        className="flex-1 p-4 overflow-y-auto h-96 border border-gray-200 rounded-t-lg"
+      >
         {messages.map((message, index) => renderMessage(message, index))}
         
         {/* Loading indicator */}
@@ -209,14 +293,14 @@ export default function ChatWidget({ taskId }: ChatWidgetProps) {
       
       {/* Preset Questions */}
       {presetQuestions.length > 0 && (
-        <div className="px-4 py-3 border-l border-r border-gray-200">
+        <div className="px-4 py-3 border-l border-r border-gray-200 bg-gray-50">
           <h4 className="text-sm font-medium text-gray-700 mb-2">Quick Questions:</h4>
           <div className="flex flex-wrap gap-2">
             {presetQuestions.map((question, index) => (
               <button
                 key={index}
                 onClick={() => handlePresetQuestion(question)}
-                className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-full text-sm text-gray-700"
+                className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-full text-sm text-gray-700 transition duration-150 ease-in-out"
                 disabled={isLoading}
               >
                 {question}
@@ -227,7 +311,7 @@ export default function ChatWidget({ taskId }: ChatWidgetProps) {
       )}
       
       {/* Message Input */}
-      <div className="border border-gray-200 rounded-b-lg p-4">
+      <div className="border border-gray-200 rounded-b-lg p-4 bg-white">
         <div className="flex">
           <textarea
             className="flex-1 focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md resize-none"
@@ -240,11 +324,25 @@ export default function ChatWidget({ taskId }: ChatWidgetProps) {
           />
           <button
             type="button"
-            className="ml-3 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            className={`ml-3 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white ${
+              isLoading || !inputMessage.trim() 
+                ? 'bg-gray-400 cursor-not-allowed' 
+                : 'bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
+            }`}
             onClick={handleSendMessage}
             disabled={isLoading || !inputMessage.trim()}
           >
-            Send
+            {isLoading ? (
+              <span className="flex items-center">
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Sending...
+              </span>
+            ) : (
+              'Send'
+            )}
           </button>
         </div>
       </div>
