@@ -54,7 +54,12 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
     if user_dict is None:
         raise credentials_exception
     
-    return User(**user_dict)
+    # Create a User object (without password)
+    return User(
+        id=user_dict["id"],
+        name=user_dict["name"],
+        role=user_dict["role"]
+    )
 
 @router.post("/login", response_model=Token)
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
@@ -93,3 +98,28 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
 async def read_users_me(current_user: User = Depends(get_current_user)):
     """Get the current authenticated user."""
     return current_user
+
+@router.get("/login-test")
+async def test_login():
+    """
+    Test endpoint for verifying login is configured.
+    
+    Returns information about the hardcoded users available
+    for testing the login functionality.
+    """
+    return {
+        "message": "Login API is operational",
+        "available_users": [
+            {
+                "username": "jeff",
+                "role": "Preparer",
+                "password": "password"
+            },
+            {
+                "username": "hanna",
+                "role": "Reviewer",
+                "password": "password"
+            }
+        ],
+        "instructions": "Use these credentials with the /api/login endpoint (POST) to get a JWT token."
+    }
