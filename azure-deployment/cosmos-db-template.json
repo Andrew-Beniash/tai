@@ -1,0 +1,121 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "cosmosAccountName": {
+            "type": "string",
+            "defaultValue": "[concat('ai-tax-cosmos-', uniqueString(resourceGroup().id))]",
+            "metadata": {
+                "description": "Name of the Cosmos DB account."
+            }
+        },
+        "location": {
+            "type": "string",
+            "defaultValue": "[resourceGroup().location]",
+            "metadata": {
+                "description": "Location for all resources."
+            }
+        },
+        "databaseName": {
+            "type": "string",
+            "defaultValue": "ai_tax_prototype",
+            "metadata": {
+                "description": "Name of the Cosmos DB database."
+            }
+        },
+        "containerNames": {
+            "type": "array",
+            "defaultValue": ["users", "projects", "tasks", "documents"],
+            "metadata": {
+                "description": "Names of the Cosmos DB containers."
+            }
+        }
+    },
+    "resources": [
+        {
+            "type": "Microsoft.DocumentDB/databaseAccounts",
+            "apiVersion": "2022-05-15",
+            "name": "[parameters('cosmosAccountName')]",
+            "location": "[parameters('location')]",
+            "kind": "GlobalDocumentDB",
+            "properties": {
+                "databaseAccountOfferType": "Standard",
+                "enableAutomaticFailover": false,
+                "enableMultipleWriteLocations": false,
+                "consistencyPolicy": {
+                    "defaultConsistencyLevel": "Session",
+                    "maxIntervalInSeconds": 5,
+                    "maxStalenessPrefix": 100
+                },
+                "locations": [
+                    {
+                        "locationName": "[parameters('location')]",
+                        "failoverPriority": 0,
+                        "isZoneRedundant": false
+                    }
+                ],
+                "capabilities": [
+                    {
+                        "name": "EnableServerless"
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
+            "apiVersion": "2022-05-15",
+            "name": "[concat(parameters('cosmosAccountName'), '/', parameters('databaseName'))]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosAccountName'))]"
+            ],
+            "properties": {
+                "resource": {
+                    "id": "[parameters('databaseName')]"
+                }
+            }
+        },
+        {
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+            "apiVersion": "2022-05-15",
+            "name": "[concat(parameters('cosmosAccountName'), '/', parameters('databaseName'), '/', parameters('containerNames')[copyIndex()])]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('cosmosAccountName'), parameters('databaseName'))]"
+            ],
+            "properties": {
+                "resource": {
+                    "id": "[parameters('containerNames')[copyIndex()]]",
+                    "partitionKey": {
+                        "paths": [
+                            "/id"
+                        ],
+                        "kind": "Hash"
+                    },
+                    "indexingPolicy": {
+                        "indexingMode": "consistent",
+                        "automatic": true,
+                        "includedPaths": [
+                            {
+                                "path": "/*"
+                            }
+                        ],
+                        "excludedPaths": [
+                            {
+                                "path": "/\"_etag\"/?"
+                            }
+                        ]
+                    }
+                }
+            },
+            "copy": {
+                "name": "containerCopy",
+                "count": "[length(parameters('containerNames'))]"
+            }
+        }
+    ],
+    "outputs": {
+        "cosmosDbEndpoint": {
+            "type": "string",
+            "value": "[reference(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosAccountName'))).documentEndpoint]"
+        }
+    }
+}

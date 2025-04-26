@@ -1,0 +1,17 @@
+This is a placeholder for a Word template (docx) file.
+
+In a real implementation, this would be a properly formatted .docx template with placeholders for:
+
+- Client name: {{ client_name }}
+- Project ID: {{ project_id }}
+- Date: {{ date }}
+- Prepared by: {{ prepared_by }}
+- Tax year: {{ tax_year }}
+- Services: {{ services }}
+- Key findings: {{ key_findings }}
+- Recommendations: {{ recommendations }}
+- Financial highlights: {{ financial_highlights }}
+
+Since we can't create a binary .docx file directly here, you'll need to create a proper Word template with these placeholders and save it as 'client_summary_template.docx' in this directory.
+
+For the docxtpl library to work, the placeholders should be in the format {{ variable_name }}.
