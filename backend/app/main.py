@@ -22,6 +22,9 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 logger.info("Environment variables loaded")
 
+# Import config first
+from app.core.config import settings
+
 # Import API routers
 from app.api import login, projects, tasks, chat, actions, documents
 
@@ -39,9 +42,10 @@ app = FastAPI(
 )
 
 # Configure CORS to allow frontend requests
+origins = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://localhost:3000").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, replace with specific origin
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -61,17 +65,23 @@ async def startup_event():
     """Initialize services on application startup."""
     logger.info("Initializing application services...")
     try:
-        # Initialize hardcoded users for the prototype
-        await user_service.initialize_hardcoded_users()
-        logger.info("Hardcoded users initialized")
-        
-        # Initialize sample projects for the prototype
-        await project_service.initialize_sample_projects()
-        logger.info("Sample projects initialized")
-        
-        # Initialize sample tasks for the prototype
-        await task_service.initialize_sample_tasks()
-        logger.info("Sample tasks initialized")
+        # Initialize mock data if using mock services
+        if getattr(settings, 'USE_MOCK_DATABASE', False):
+            from app.core.mock.initialize import ensure_mock_data_initialized
+            await ensure_mock_data_initialized()
+            logger.info("Mock data initialized")
+        else:
+            # Initialize hardcoded users for the prototype
+            await user_service.initialize_hardcoded_users()
+            logger.info("Hardcoded users initialized")
+            
+            # Initialize sample projects for the prototype
+            await project_service.initialize_sample_projects()
+            logger.info("Sample projects initialized")
+            
+            # Initialize sample tasks for the prototype
+            await task_service.initialize_sample_tasks()
+            logger.info("Sample tasks initialized")
         
         # Log successful startup
         logger.info("All services initialized successfully")
