@@ -28,7 +28,7 @@ Two predefined users:
 ### Prerequisites
 
 - Node.js 
-- Python 3.8+
+- Python 3.11+
 - Azure account
 - Google Cloud account (for Drive API)
 
@@ -47,3 +47,28 @@ See component-specific README files for detailed instructions.
 ## Deployment
 
 The application deploys automatically to Azure via GitHub Actions when pushing to the main branch.
+
+### CI/CD Workflows
+
+This project uses GitHub Actions for automated building, testing, and deployment to Azure:
+
+- **Backend Workflow**: Builds, tests, and deploys the FastAPI backend to Azure App Service
+- **Frontend Workflow**: Builds, tests, and deploys the React Vite frontend to Azure App Service
+- **Functions Workflow**: Deploys Azure Functions for simulated action endpoints
+- **Main Workflow**: Orchestrates all component deployments together when applicable
+
+### Required Secrets
+
+To use the CI/CD pipelines, you need to set up the following secrets in your GitHub repository:
+
+- `AZURE_WEBAPP_PUBLISH_PROFILE_BACKEND`: Publish profile for backend Azure App Service
+- `AZURE_WEBAPP_PUBLISH_PROFILE_FRONTEND`: Publish profile for frontend Azure App Service
+- `AZURE_FUNCTIONAPP_PUBLISH_PROFILE`: Publish profile for Azure Functions
+- `VITE_API_BASE_URL`: Base URL for the backend API (used during frontend build)
+
+### Manual Deployment
+
+To trigger workflows manually:
+1. Go to the Actions tab in your GitHub repository
+2. Select the workflow you want to run
+3. Click "Run workflow" and select the branch

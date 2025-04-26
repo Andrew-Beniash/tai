@@ -1,0 +1,22 @@
+name: Deploy All Components to Azure
+
+on:
+  push:
+    branches: [ main ]
+    paths-ignore:
+      - 'README.md'
+      - '.gitignore'
+  workflow_dispatch:
+
+jobs:
+  backend:
+    uses: ./.github/workflows/backend-deploy.yml
+    secrets: inherit
+    
+  frontend:
+    uses: ./.github/workflows/frontend-deploy.yml
+    secrets: inherit
+    
+  functions:
+    uses: ./.github/workflows/functions-deploy.yml
+    secrets: inherit
