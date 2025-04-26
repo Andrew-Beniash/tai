@@ -16,7 +16,16 @@ class Settings(BaseSettings):
     PORT: int = 8000
     
     # Database settings
-    DATABASE_URL: str
+    DATABASE_URL: str = ""
+    
+    # Azure Cosmos DB settings
+    AZURE_COSMOS_URI: str
+    AZURE_COSMOS_KEY: str
+    AZURE_COSMOS_DATABASE: str = "ai_tax_prototype"
+    AZURE_COSMOS_CONTAINER_USERS: str = "users"
+    AZURE_COSMOS_CONTAINER_PROJECTS: str = "projects"
+    AZURE_COSMOS_CONTAINER_TASKS: str = "tasks"
+    AZURE_COSMOS_CONTAINER_DOCUMENTS: str = "documents"
     
     # OpenAI API settings
     OPENAI_API_KEY: str

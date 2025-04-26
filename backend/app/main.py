@@ -5,16 +5,31 @@ and configures CORS, error handling, and middleware.
 """
 
 import os
+import logging
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
+logger = logging.getLogger(__name__)
+
 # Load environment variables
 load_dotenv()
+logger.info("Environment variables loaded")
 
 # Import API routers
 from app.api import login, projects, tasks, chat, actions
+
+# Import services for initialization
+from app.services.user_service import user_service
+from app.services.project_service import project_service
+from app.services.task_service import task_service
+from app.services.document_service import document_service
 
 # Create FastAPI app
 app = FastAPI(
@@ -38,6 +53,23 @@ app.include_router(projects.router, prefix="/api", tags=["Projects"])
 app.include_router(tasks.router, prefix="/api", tags=["Tasks"])
 app.include_router(chat.router, prefix="/api", tags=["Chat"])
 app.include_router(actions.router, prefix="/api", tags=["Actions"])
+
+# Startup event to initialize services
+@app.on_event("startup")
+async def startup_event():
+    """Initialize services on application startup."""
+    logger.info("Initializing application services...")
+    try:
+        # Initialize hardcoded users for the prototype
+        await user_service.initialize_hardcoded_users()
+        logger.info("Hardcoded users initialized")
+        
+        # Log successful startup
+        logger.info("All services initialized successfully")
+    except Exception as e:
+        logger.error(f"Error during initialization: {str(e)}")
+        # Don't raise exception here to allow the app to start even if initialization fails
+        # This is useful for development when some services might not be available
 
 # Root endpoint
 @app.get("/")
