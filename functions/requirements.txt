@@ -1,0 +1,7 @@
+azure-functions==1.15.0
+python-docx==0.8.11
+pdfkit==1.0.0
+reportlab==3.6.13
+httpx==0.24.1
+python-dotenv==1.0.0
+jinja2==3.1.2
