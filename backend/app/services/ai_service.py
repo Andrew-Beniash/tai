@@ -2,6 +2,7 @@
 AI Service to handle interaction with OpenAI API.
 Provides methods for generating AI responses based on task context,
 document content, and user messages.
+Integrates document content from Google Drive.
 """
 
 import logging
@@ -11,8 +12,8 @@ from typing import List, Dict, Any, Optional
 from app.core.config import settings
 from app.core.openai_client import get_openai_client
 from app.models.task import TaskResponse
-from app.models.document import DocumentResponse
-from app.utils.prompt_builder import build_prompt
+from app.models.document import Document, DocumentResponse
+from app.utils.prompt_builder import build_prompt, build_rag_context
 from app.utils.text_utils import extract_actions_from_response
 
 # Configure logging
@@ -60,7 +61,11 @@ class AIService:
         }
     
     async def process_message(
-        self, message: str, task: TaskResponse, documents: List[DocumentResponse]
+        self, 
+        message: str, 
+        task: TaskResponse, 
+        documents: List[Document],
+        document_context: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Process a user message with AI, using task and document context.
@@ -69,6 +74,7 @@ class AIService:
             message: The user's message
             task: The task context
             documents: List of relevant documents
+            document_context: Optional pre-fetched document context
             
         Returns:
             Dict containing AI response and suggested actions
@@ -78,6 +84,18 @@ class AIService:
         try:
             # Build prompt with context
             system_prompt, user_prompt = await build_prompt(message, task, documents)
+            
+            # If we have pre-fetched document context, use it
+            if document_context:
+                user_prompt = f"""
+User Question: {message}
+
+Document Context:
+{document_context}
+
+Please provide a helpful response based on the available information.
+"""
+            
             logger.debug(f"System prompt: {system_prompt[:100]}...")
             logger.debug(f"User prompt: {user_prompt[:100]}...")
             
@@ -103,16 +121,97 @@ class AIService:
             suggested_actions = extract_actions_from_response(ai_response)
             logger.info(f"Extracted {len(suggested_actions)} suggested actions")
             
+            # Build references with document details
+            references = []
+            for doc in documents[:3]:  # Limit to 3 references
+                references.append({
+                    "source": doc.file_name,
+                    "id": doc.doc_id,
+                    "type": doc.file_type,
+                    "last_modified": doc.last_modified.isoformat() if doc.last_modified else None,
+                    "web_view_link": doc.web_view_link
+                })
+            
             # Return formatted response
             return {
                 "message": ai_response,
                 "suggested_actions": suggested_actions,
-                "references": [{"source": doc.filename, "id": doc.doc_id} for doc in documents[:3]]
+                "references": references
             }
             
         except Exception as e:
             logger.error(f"Error in AI processing: {str(e)}")
             raise Exception(f"AI processing error: {str(e)}")
+    
+    async def analyze_documents(
+        self,
+        task_id: str,
+        question: str,
+        document_context: str
+    ) -> Dict[str, Any]:
+        """
+        Perform document analysis with AI based on a specific question.
+        
+        Args:
+            task_id: The task ID
+            question: The analysis question
+            document_context: Document content context
+            
+        Returns:
+            Dict containing AI analysis and insights
+        """
+        logger.info(f"Analyzing documents for task {task_id}")
+        
+        try:
+            # Build system prompt for document analysis
+            system_prompt = """
+You are an AI Tax Assistant specializing in document analysis. Your task is to analyze
+tax-related documents and provide insights based on specific questions.
+
+When analyzing documents:
+1. Be specific about what you find in the documents
+2. Cite the source document when possible
+3. Highlight missing information or inconsistencies
+4. Use professional tax terminology
+5. Suggest concrete next steps based on your findings
+"""
+            
+            # Build user prompt with question and document context
+            user_prompt = f"""
+Analysis Question: {question}
+
+Document Context:
+{document_context}
+
+Please provide a detailed analysis based on these documents.
+"""
+            
+            # Call OpenAI API
+            response = await self.client.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                temperature=0.5,  # Lower temperature for more factual responses
+                max_tokens=2000,
+                top_p=1.0,
+                frequency_penalty=0.0,
+                presence_penalty=0.0
+            )
+            
+            # Extract response text
+            analysis = response.choices[0].message.content.strip()
+            
+            # Return formatted response
+            return {
+                "analysis": analysis,
+                "question": question
+            }
+            
+        except Exception as e:
+            logger.error(f"Error in document analysis: {str(e)}")
+            raise Exception(f"Document analysis error: {str(e)}")
     
     async def get_preset_questions(self, task: TaskResponse) -> List[str]:
         """

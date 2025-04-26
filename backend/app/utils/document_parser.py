@@ -1,15 +1,40 @@
 """
 Document parsing utilities for extracting text from various file formats.
 Supports PDF, DOCX, XLSX, and text files.
+Integrates with Google Drive for document retrieval.
 """
 
 import logging
 import os
 import re
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 import io
+import base64
+from pathlib import Path
 
-from app.core.drive_client import get_drive_client
+# For PDF parsing
+try:
+    import PyPDF2
+    PDF_SUPPORT = True
+except ImportError:
+    PDF_SUPPORT = False
+
+# For DOCX parsing
+try:
+    import docx
+    DOCX_SUPPORT = True
+except ImportError:
+    DOCX_SUPPORT = False
+
+# For XLSX parsing
+try:
+    import pandas as pd
+    XLSX_SUPPORT = True
+except ImportError:
+    XLSX_SUPPORT = False
+
+from app.core.drive_client import drive_client
+from app.services.document_service import document_service
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -199,121 +224,179 @@ Schedule K: Partners' Distributive Share Items
 """
 }
 
-async def extract_document_text(doc_id: str, filename: str) -> str:
+async def extract_document_text(doc_id: str, filename: str = None) -> str:
     """
     Extract text content from a document.
-    In prototype, returns dummy content.
-    In production, would download from Google Drive and parse based on file type.
+    Uses document_service to fetch the document content from Google Drive,
+    then extracts text based on file type.
     
     Args:
         doc_id: The document ID
-        filename: The filename
+        filename: Optional filename (if doc_id is a Google Drive file ID rather than our internal ID)
         
     Returns:
         Extracted text content
     """
-    logger.info(f"Extracting text from document {doc_id}: {filename}")
+    logger.info(f"Extracting text from document {doc_id}")
     
     try:
         # For prototype, check if we have dummy content
-        if filename in DUMMY_DOCUMENTS:
+        if filename and filename in DUMMY_DOCUMENTS:
             logger.info(f"Using dummy content for {filename}")
             return DUMMY_DOCUMENTS[filename]
-            
-        # In a real app, this would download and parse the file from Google Drive
-        drive_client = get_drive_client()
         
-        # Extract file extension
-        _, ext = os.path.splitext(filename.lower())
+        # First try to get the document from our document service
+        if not filename:
+            # Try to get document metadata from our database
+            document = await document_service.get_by_id(doc_id)
+            if document:
+                filename = document.file_name
         
-        # Based on file extension, use appropriate parser
-        if ext == '.pdf':
-            return await extract_pdf_text(drive_client, doc_id)
-        elif ext == '.docx':
-            return await extract_docx_text(drive_client, doc_id)
-        elif ext == '.xlsx':
-            return await extract_xlsx_text(drive_client, doc_id)
-        elif ext in ['.txt', '.csv', '.json']:
-            return await extract_text_file(drive_client, doc_id)
+        # Get document content from Google Drive via our document service
+        text_content = await document_service.get_text_content(doc_id)
+        if text_content:
+            return text_content
+        
+        # If text content extraction failed or isn't implemented, get raw content and parse it
+        content, mime_type = await document_service.get_document_content(doc_id)
+        if not content:
+            logger.warning(f"Could not retrieve document content for {doc_id}")
+            return f"[Could not retrieve document content]"
+        
+        # Extract text based on file type
+        if not filename:
+            # If no filename, try to determine from mime_type
+            if mime_type == 'application/pdf':
+                return extract_text_from_pdf_bytes(content)
+            elif mime_type == 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+                return extract_text_from_docx_bytes(content)
+            elif mime_type == 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
+                return extract_text_from_xlsx_bytes(content)
+            elif mime_type and mime_type.startswith('text/'):
+                return content.decode('utf-8', errors='replace')
+            else:
+                return f"[Content extraction not supported for this file type: {mime_type}]"
         else:
-            logger.warning(f"Unsupported file type: {ext} for {filename}")
-            return f"[Content extraction not supported for {ext} files]"
+            # If we have a filename, use the extension
+            _, ext = os.path.splitext(filename.lower())
+            
+            if ext == '.pdf':
+                return extract_text_from_pdf_bytes(content)
+            elif ext == '.docx':
+                return extract_text_from_docx_bytes(content)
+            elif ext == '.xlsx':
+                return extract_text_from_xlsx_bytes(content)
+            elif ext in ['.txt', '.csv', '.json', '.md']:
+                return content.decode('utf-8', errors='replace')
+            else:
+                logger.warning(f"Unsupported file type: {ext} for {filename}")
+                return f"[Content extraction not supported for {ext} files]"
             
     except Exception as e:
-        logger.error(f"Error extracting text from {filename}: {str(e)}")
+        logger.error(f"Error extracting text from document {doc_id}: {str(e)}")
         return f"[Error extracting content: {str(e)}]"
 
-async def extract_pdf_text(drive_client, doc_id: str) -> str:
+def extract_text_from_pdf_bytes(content: bytes) -> str:
     """
-    Extract text from PDF document.
-    This is a placeholder for the actual implementation.
+    Extract text from PDF content.
     
     Args:
-        drive_client: Google Drive client
-        doc_id: Document ID
+        content: PDF content as bytes
         
     Returns:
         Extracted text
     """
-    # In a real app, would download PDF from Drive and use a library like PyPDF2
-    logger.info(f"PDF extraction not implemented for {doc_id} - would download and parse")
-    return "[PDF content would be extracted here in a production environment]"
+    if not PDF_SUPPORT:
+        return "[PDF parsing support not installed. Install PyPDF2 package.]"
+    
+    try:
+        # Create a PDF reader object
+        pdf_file = io.BytesIO(content)
+        pdf_reader = PyPDF2.PdfReader(pdf_file)
+        
+        # Extract text from each page
+        text = ""
+        for page in pdf_reader.pages:
+            text += page.extract_text() + "\n\n"
+        
+        return text.strip()
+    except Exception as e:
+        logger.error(f"Error extracting text from PDF: {str(e)}")
+        return f"[Error extracting PDF text: {str(e)}]"
 
-async def extract_docx_text(drive_client, doc_id: str) -> str:
+def extract_text_from_docx_bytes(content: bytes) -> str:
     """
-    Extract text from DOCX document.
-    This is a placeholder for the actual implementation.
+    Extract text from DOCX content.
     
     Args:
-        drive_client: Google Drive client
-        doc_id: Document ID
+        content: DOCX content as bytes
         
     Returns:
         Extracted text
     """
-    # In a real app, would download DOCX from Drive and use a library like python-docx
-    logger.info(f"DOCX extraction not implemented for {doc_id} - would download and parse")
-    return "[DOCX content would be extracted here in a production environment]"
+    if not DOCX_SUPPORT:
+        return "[DOCX parsing support not installed. Install python-docx package.]"
+    
+    try:
+        # Create a DOCX document
+        docx_file = io.BytesIO(content)
+        doc = docx.Document(docx_file)
+        
+        # Extract text from paragraphs
+        text = ""
+        for paragraph in doc.paragraphs:
+            text += paragraph.text + "\n"
+        
+        # Extract text from tables
+        for table in doc.tables:
+            for row in table.rows:
+                for cell in row.cells:
+                    text += cell.text + "\t"
+                text += "\n"
+        
+        return text.strip()
+    except Exception as e:
+        logger.error(f"Error extracting text from DOCX: {str(e)}")
+        return f"[Error extracting DOCX text: {str(e)}]"
 
-async def extract_xlsx_text(drive_client, doc_id: str) -> str:
+def extract_text_from_xlsx_bytes(content: bytes) -> str:
     """
-    Extract text from XLSX document.
-    This is a placeholder for the actual implementation.
+    Extract text from XLSX content.
     
     Args:
-        drive_client: Google Drive client
-        doc_id: Document ID
+        content: XLSX content as bytes
         
     Returns:
         Extracted text
     """
-    # In a real app, would download XLSX from Drive and use a library like pandas
-    logger.info(f"XLSX extraction not implemented for {doc_id} - would download and parse")
-    return "[XLSX content would be extracted here in a production environment]"
-
-async def extract_text_file(drive_client, doc_id: str) -> str:
-    """
-    Extract text from plain text file.
-    This is a placeholder for the actual implementation.
+    if not XLSX_SUPPORT:
+        return "[XLSX parsing support not installed. Install pandas package.]"
     
-    Args:
-        drive_client: Google Drive client
-        doc_id: Document ID
+    try:
+        # Create an XLSX file
+        xlsx_file = io.BytesIO(content)
         
-    Returns:
-        Extracted text
-    """
-    # In a real app, would download text file from Drive
-    logger.info(f"Text file extraction not implemented for {doc_id} - would download")
-    return "[Text file content would be extracted here in a production environment]"
+        # Read all sheets
+        xlsx_data = pd.read_excel(xlsx_file, sheet_name=None)
+        
+        # Extract text from each sheet
+        text = ""
+        for sheet_name, df in xlsx_data.items():
+            text += f"SHEET: {sheet_name}\n"
+            text += df.to_string() + "\n\n"
+        
+        return text.strip()
+    except Exception as e:
+        logger.error(f"Error extracting text from XLSX: {str(e)}")
+        return f"[Error extracting XLSX text: {str(e)}]"
 
-async def get_document_preview(doc_id: str, filename: str, max_length: int = 500) -> str:
+async def get_document_preview(doc_id: str, filename: str = None, max_length: int = 500) -> str:
     """
     Get a preview of a document's content.
     
     Args:
         doc_id: The document ID
-        filename: The filename
+        filename: Optional filename
         max_length: Maximum length of preview
         
     Returns:
@@ -334,3 +417,64 @@ async def get_document_preview(doc_id: str, filename: str, max_length: int = 500
     except Exception as e:
         logger.error(f"Error getting document preview: {str(e)}")
         return f"[Error getting preview: {str(e)}]"
+
+async def get_documents_content_for_task(task_id: str, max_chars_per_doc: int = 10000) -> Dict[str, str]:
+    """
+    Get text content for all documents associated with a task.
+    
+    Args:
+        task_id: Task ID
+        max_chars_per_doc: Maximum characters to extract per document
+        
+    Returns:
+        Dictionary mapping document IDs to their text content
+    """
+    # Get documents for task
+    documents = await document_service.get_documents_for_task(task_id)
+    
+    result = {}
+    for doc in documents:
+        # Extract text content
+        text = await extract_document_text(doc.doc_id)
+        
+        # Trim if necessary
+        if len(text) > max_chars_per_doc:
+            text = text[:max_chars_per_doc] + "... [content truncated]"
+            
+        result[doc.doc_id] = text
+    
+    return result
+
+async def get_document_metadata(project_id: str = None, task_id: str = None) -> List[Dict[str, Any]]:
+    """
+    Get metadata for documents associated with a project or task.
+    
+    Args:
+        project_id: Optional project ID
+        task_id: Optional task ID
+        
+    Returns:
+        List of document metadata dictionaries
+    """
+    documents = []
+    
+    if project_id:
+        # Get all documents for project
+        documents = await document_service.get_documents_by_project(project_id)
+    elif task_id:
+        # Get documents for task
+        documents = await document_service.get_documents_for_task(task_id)
+    
+    # Convert to dictionary format
+    result = []
+    for doc in documents:
+        result.append({
+            "doc_id": doc.doc_id,
+            "file_name": doc.file_name,
+            "file_type": doc.file_type,
+            "last_modified": doc.last_modified.isoformat(),
+            "size_bytes": doc.size_bytes,
+            "web_view_link": doc.web_view_link
+        })
+    
+    return result

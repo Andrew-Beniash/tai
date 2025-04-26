@@ -23,7 +23,7 @@ load_dotenv()
 logger.info("Environment variables loaded")
 
 # Import API routers
-from app.api import login, projects, tasks, chat, actions
+from app.api import login, projects, tasks, chat, actions, documents
 
 # Import services for initialization
 from app.services.user_service import user_service
@@ -53,6 +53,7 @@ app.include_router(projects.router, prefix="/api", tags=["Projects"])
 app.include_router(tasks.router, prefix="/api", tags=["Tasks"])
 app.include_router(chat.router, prefix="/api", tags=["Chat"])
 app.include_router(actions.router, prefix="/api", tags=["Actions"])
+app.include_router(documents.router, prefix="/api", tags=["Documents"])
 
 # Startup event to initialize services
 @app.on_event("startup")
