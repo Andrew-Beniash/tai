@@ -1,6 +1,7 @@
 /**
  * LoginPage component
  * Provides a user interface for logging in as Jeff or Hanna
+ * Allows easy switching between users with clear role identification
  */
 
 import { useState } from 'react';
@@ -8,37 +9,13 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export default function LoginPage() {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!username || !password) {
-      setError('Please enter both username and password');
-      return;
-    }
-    
-    try {
-      setError('');
-      setLoading(true);
-      await login(username, password);
-      
-      // Redirect to projects page after successful login
-      navigate('/projects');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to login');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleQuickLogin = async (user: 'jeff' | 'hanna') => {
+  const handleUserSelect = async (user: 'jeff' | 'hanna') => {
     try {
       setError('');
       setLoading(true);
@@ -61,7 +38,7 @@ export default function LoginPage() {
             AI-Augmented Tax Engagement
           </h2>
           <p className="mt-2 text-sm text-gray-600">
-            Prototype Login
+            Prototype User Selector
           </p>
         </div>
         
@@ -71,79 +48,56 @@ export default function LoginPage() {
           </div>
         )}
         
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="rounded-md shadow-sm -space-y-px">
-            <div>
-              <label htmlFor="username" className="sr-only">Username</label>
-              <input
-                id="username"
-                name="username"
-                type="text"
-                autoComplete="username"
-                required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                placeholder="Username (jeff or hanna)"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-              />
-            </div>
-            <div>
-              <label htmlFor="password" className="sr-only">Password</label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                placeholder="Password (use 'password')"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-blue-300"
-            >
-              {loading ? 'Signing in...' : 'Sign in'}
-            </button>
-          </div>
-        </form>
+        <div className="my-8">
+          <p className="text-sm text-gray-500 mb-4 text-center">
+            This prototype simulates two different user roles in the tax engagement process.
+            Select a user to begin exploring the application.
+          </p>
+        </div>
         
-        <div className="mt-6">
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300"></div>
+        <div className="space-y-4">
+          <button
+            onClick={() => handleUserSelect('jeff')}
+            disabled={loading}
+            className="w-full flex items-center p-4 border border-gray-200 rounded-lg shadow-sm hover:bg-blue-50 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            <div className="bg-blue-100 text-blue-800 font-bold rounded-full h-12 w-12 flex items-center justify-center text-xl">
+              J
             </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-gray-500">Or quick login as</span>
+            <div className="ml-4 text-left">
+              <p className="text-lg font-medium text-gray-900">Jeff</p>
+              <p className="text-sm text-gray-500">Tax Preparer</p>
+              <p className="text-xs text-gray-400 mt-1">Responsible for preparing tax forms and gathering client information</p>
             </div>
+          </button>
+          
+          <button
+            onClick={() => handleUserSelect('hanna')}
+            disabled={loading}
+            className="w-full flex items-center p-4 border border-gray-200 rounded-lg shadow-sm hover:bg-purple-50 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
+          >
+            <div className="bg-purple-100 text-purple-800 font-bold rounded-full h-12 w-12 flex items-center justify-center text-xl">
+              H
+            </div>
+            <div className="ml-4 text-left">
+              <p className="text-lg font-medium text-gray-900">Hanna</p>
+              <p className="text-sm text-gray-500">Tax Reviewer</p>
+              <p className="text-xs text-gray-400 mt-1">Responsible for reviewing prepared tax forms and ensuring compliance</p>
+            </div>
+          </button>
+        </div>
+        
+        {loading && (
+          <div className="mt-4 text-center text-sm text-gray-500">
+            Logging in...
           </div>
-
-          <div className="mt-6 grid grid-cols-2 gap-3">
-            <div>
-              <button
-                onClick={() => handleQuickLogin('jeff')}
-                disabled={loading}
-                className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                Jeff (Preparer)
-              </button>
-            </div>
-            <div>
-              <button
-                onClick={() => handleQuickLogin('hanna')}
-                disabled={loading}
-                className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                Hanna (Reviewer)
-              </button>
-            </div>
-          </div>
+        )}
+        
+        <div className="mt-6 pt-4 border-t border-gray-200">
+          <p className="text-xs text-gray-500 text-center">
+            Note: This is a prototype application with simulated authentication.
+            Your session will be stored in your browser's localStorage.
+          </p>
         </div>
       </div>
     </div>

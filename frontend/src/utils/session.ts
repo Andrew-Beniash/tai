@@ -2,6 +2,8 @@
  * Session utilities for managing user authentication
  */
 
+import { User } from '../api/auth';
+
 // Local storage keys
 const TOKEN_KEY = 'ai_tax_auth_token';
 const USER_KEY = 'ai_tax_current_user';
@@ -72,4 +74,28 @@ export const isLoggedIn = (): boolean => {
 export const logout = (): void => {
   clearAuthToken();
   clearCurrentUser();
+};
+
+/**
+ * Switch user by directly setting a new user in localStorage
+ * This is a simplified approach for the prototype that skips the login API call
+ * 
+ * @param username - 'jeff' or 'hanna'
+ * @returns User object for the newly logged in user
+ */
+export const switchUser = (username: 'jeff' | 'hanna'): User => {
+  // Create a user object based on the selected username
+  const user: User = {
+    id: username,
+    name: username === 'jeff' ? 'Jeff' : 'Hanna',
+    role: username === 'jeff' ? 'Preparer' : 'Reviewer',
+  };
+  
+  // Store user in localStorage
+  saveCurrentUser(user);
+  
+  // Set a dummy token to indicate authenticated state
+  saveAuthToken('prototype_token');
+  
+  return user;
 };

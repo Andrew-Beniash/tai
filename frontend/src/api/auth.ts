@@ -4,6 +4,7 @@
  */
 
 import axios from 'axios';
+import { saveCurrentUser, getCurrentUser as getStoredUser, clearCurrentUser, saveAuthToken, clearAuthToken } from '../utils/session';
 
 // Get API URL from environment or use default
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -60,10 +61,13 @@ export async function login(username: string, password: string): Promise<User> {
     });
     
     const { access_token } = response.data;
-    localStorage.setItem('token', access_token);
+    saveAuthToken(access_token);
     */
     
-    // For the prototype, let's create a mock user based on username
+    // For the prototype, store a dummy token
+    saveAuthToken('prototype_auth_token');
+    
+    // Create a mock user based on username
     const user: User = {
       id: username,
       name: username === 'jeff' ? 'Jeff' : 'Hanna',
@@ -71,7 +75,7 @@ export async function login(username: string, password: string): Promise<User> {
     };
     
     // Store user in localStorage for session management
-    localStorage.setItem('user', JSON.stringify(user));
+    saveCurrentUser(user);
     
     return user;
   } catch (error) {
@@ -86,17 +90,15 @@ export async function login(username: string, password: string): Promise<User> {
  * @returns The current user or null if not logged in
  */
 export function getCurrentUser(): User | null {
-  const userJson = localStorage.getItem('user');
-  return userJson ? JSON.parse(userJson) : null;
+  return getStoredUser();
 }
 
 /**
  * Logout the current user by clearing localStorage
  */
 export function logout(): void {
-  localStorage.removeItem('user');
-  // Also remove token if we were using real authentication
-  localStorage.removeItem('token');
+  clearCurrentUser();
+  clearAuthToken();
 }
 
 /**
