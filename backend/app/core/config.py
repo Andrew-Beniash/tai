@@ -34,6 +34,8 @@ class Settings(BaseSettings):
     # Google Drive API settings
     GOOGLE_APPLICATION_CREDENTIALS_JSON: str
     GOOGLE_DRIVE_ROOT_FOLDER_ID: str
+    GOOGLE_DRIVE_PROJECTS_FOLDER_ID: Optional[str] = None
+    GOOGLE_DRIVE_TEMPLATES_FOLDER_ID: Optional[str] = None
     
     # Azure Function URLs
     AZURE_FUNCTION_BASE_URL: str

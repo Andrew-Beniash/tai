@@ -1,0 +1,55 @@
+ACME CORPORATION
+PRIOR YEAR TAX RETURN
+FORM 1120: U.S. CORPORATION INCOME TAX RETURN
+TAX YEAR: 2023
+
+EIN: 12-3456789
+Address: 123 Main Street, Anytown, NY 10001
+
+INCOME STATEMENT SUMMARY:
+Gross receipts: $5,250,000
+Cost of goods sold: $2,875,000
+Gross profit: $2,375,000
+Total deductions: $1,945,000
+Taxable income: $430,000
+Total tax: $90,300
+
+BALANCE SHEET SUMMARY:
+Total assets: $3,750,000
+Total liabilities: $1,875,000
+Total equity: $1,875,000
+
+SCHEDULE L - BALANCE SHEETS:
+Cash: $450,000
+Accounts receivable: $825,000
+Inventories: $675,000
+Buildings and equipment: $1,800,000
+Less accumulated depreciation: $600,000
+Accounts payable: $375,000
+Mortgages and notes payable: $1,500,000
+Capital stock: $500,000
+Retained earnings: $1,375,000
+
+SCHEDULE M-1 RECONCILIATION:
+Net income per books: $455,000
+Federal income tax: $90,300
+Excess of capital losses over gains: $0
+Income subject to tax not recorded on books: $0
+Expenses recorded on books not deducted: $25,000
+Income recorded on books not included in return: $50,000
+Deductions on return not charged against book income: $0
+Income per return: $430,000
+
+RISK FACTORS NOTED:
+1. Large increase in accounts receivable compared to previous year
+2. Potential §263A UNICAP adjustment needed for inventory
+3. Possible research credit qualification for product development
+4. Missing documentation for some charitable contributions
+5. Potential exposure in state nexus for multi-state operations
+
+PREPARER NOTES:
+- Client needs to improve documentation for travel and entertainment expenses
+- Consider cost segregation study for new warehouse acquisition
+- Review transfer pricing for international subsidiary transactions
+- Cash to accrual method change may be beneficial next year
+- Recommend quarterly estimated tax payment schedule adjustment

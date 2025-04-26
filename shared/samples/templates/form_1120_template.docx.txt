@@ -1,0 +1,48 @@
+SAMPLE FORM 1120 TEMPLATE
+
+U.S. CORPORATION INCOME TAX RETURN
+
+For the fiscal year beginning [START_DATE] and ending [END_DATE]
+
+NAME OF CORPORATION: [COMPANY_NAME]
+ADDRESS: [COMPANY_ADDRESS]
+CITY, STATE, ZIP: [COMPANY_CITY_STATE_ZIP]
+EIN: [COMPANY_EIN]
+
+PART I - INCOME
+1. Gross receipts or sales...................... [GROSS_RECEIPTS]
+2. Cost of goods sold........................... [COST_OF_GOODS]
+3. Gross profit................................ [GROSS_PROFIT]
+4. Dividends................................... [DIVIDENDS]
+5. Interest.................................... [INTEREST]
+6. Gross rents................................. [GROSS_RENTS]
+7. Gross royalties............................. [GROSS_ROYALTIES]
+8. Capital gain net income..................... [CAPITAL_GAINS]
+9. Net gain or (loss) from Form 4797.......... [FORM_4797_GAIN]
+10. Other income............................... [OTHER_INCOME]
+11. TOTAL INCOME............................... [TOTAL_INCOME]
+
+PART II - DEDUCTIONS
+12. Compensation of officers................... [OFFICER_COMPENSATION]
+13. Salaries and wages......................... [SALARIES_WAGES]
+14. Repairs and maintenance.................... [REPAIRS_MAINTENANCE]
+15. Bad debts.................................. [BAD_DEBTS]
+16. Rents...................................... [RENT_EXPENSE]
+17. Taxes and licenses......................... [TAXES_LICENSES]
+18. Interest................................... [INTEREST_EXPENSE]
+19. Charitable contributions................... [CHARITABLE_CONTRIBUTIONS]
+20. Depreciation.............................. [DEPRECIATION]
+21. Depletion................................. [DEPLETION]
+22. Advertising............................... [ADVERTISING]
+23. Pension, profit-sharing plans............. [PENSION_PROFIT_SHARING]
+24. Employee benefit programs................. [EMPLOYEE_BENEFITS]
+25. Other deductions.......................... [OTHER_DEDUCTIONS]
+26. TOTAL DEDUCTIONS.......................... [TOTAL_DEDUCTIONS]
+27. Taxable income before NOL and special deductions... [TAXABLE_INCOME_BEFORE]
+28. Less: Net operating loss deduction....... [NOL_DEDUCTION]
+29. Special deductions....................... [SPECIAL_DEDUCTIONS]
+30. TAXABLE INCOME........................... [TAXABLE_INCOME]
+
+PART III - TAX COMPUTATION
+31. Total tax................................ [TOTAL_TAX]
+

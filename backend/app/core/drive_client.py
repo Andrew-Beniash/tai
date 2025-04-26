@@ -32,12 +32,14 @@ class DriveClient:
         # Build the Google Drive service
         self.service = build('drive', 'v3', credentials=credentials)
         
-        # Root folder ID for project storage
+        # Folder IDs for project storage
         self.root_folder_id = settings.GOOGLE_DRIVE_ROOT_FOLDER_ID
+        self.projects_folder_id = getattr(settings, 'GOOGLE_DRIVE_PROJECTS_FOLDER_ID', self.root_folder_id)
+        self.templates_folder_id = getattr(settings, 'GOOGLE_DRIVE_TEMPLATES_FOLDER_ID', None)
     
     def list_project_folders(self) -> List[Dict]:
-        """List all project folders in the root directory."""
-        query = f"'{self.root_folder_id}' in parents and mimeType='application/vnd.google-apps.folder'"
+        """List all project folders in the projects directory."""
+        query = f"'{self.projects_folder_id}' in parents and mimeType='application/vnd.google-apps.folder'"
         results = self.service.files().list(
             q=query,
             fields="files(id, name)"
@@ -48,7 +50,7 @@ class DriveClient:
     def get_folder_by_project_id(self, project_id: str) -> Optional[Dict]:
         """Get Google Drive folder for a specific project ID."""
         # Assuming folder names match project IDs
-        query = f"'{self.root_folder_id}' in parents and name='Project-{project_id}' and mimeType='application/vnd.google-apps.folder'"
+        query = f"'{self.projects_folder_id}' in parents and name='Project-{project_id}' and mimeType='application/vnd.google-apps.folder'"
         results = self.service.files().list(
             q=query,
             fields="files(id, name)"
@@ -133,7 +135,7 @@ class DriveClient:
         folder_metadata = {
             'name': f'Project-{project_id}',
             'mimeType': 'application/vnd.google-apps.folder',
-            'parents': [self.root_folder_id]
+            'parents': [self.projects_folder_id]
         }
         
         folder = self.service.files().create(
@@ -142,6 +144,19 @@ class DriveClient:
         ).execute()
         
         return folder
+        
+    def list_form_templates(self) -> List[Dict]:
+        """List all form templates available in the templates folder."""
+        if not self.templates_folder_id:
+            return []
+            
+        query = f"'{self.templates_folder_id}' in parents and mimeType!='application/vnd.google-apps.folder'"
+        results = self.service.files().list(
+            q=query,
+            fields="files(id, name, mimeType, modifiedTime)"
+        ).execute()
+        
+        return results.get('files', [])
 
 # Create a global instance for import
 drive_client = DriveClient()

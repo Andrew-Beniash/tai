@@ -1,0 +1,57 @@
+SAMPLE FORM 1065 TEMPLATE
+
+U.S. RETURN OF PARTNERSHIP INCOME
+
+For the fiscal year beginning [START_DATE] and ending [END_DATE]
+
+NAME OF PARTNERSHIP: [PARTNERSHIP_NAME]
+ADDRESS: [PARTNERSHIP_ADDRESS]
+CITY, STATE, ZIP: [PARTNERSHIP_CITY_STATE_ZIP]
+EIN: [PARTNERSHIP_EIN]
+
+PART I - INCOME
+1. Gross receipts or sales...................... [GROSS_RECEIPTS]
+2. Cost of goods sold........................... [COST_OF_GOODS]
+3. Gross profit................................ [GROSS_PROFIT]
+4. Ordinary income from other partnerships..... [OTHER_PARTNERSHIP_INCOME]
+5. Net farm profit (loss)...................... [FARM_PROFIT]
+6. Net gain (loss) from Form 4797.............. [FORM_4797_GAIN]
+7. Other income (loss)......................... [OTHER_INCOME]
+8. TOTAL INCOME (LOSS)......................... [TOTAL_INCOME]
+
+PART II - DEDUCTIONS
+9. Salaries and wages.......................... [SALARIES_WAGES]
+10. Guaranteed payments to partners............ [GUARANTEED_PAYMENTS]
+11. Repairs and maintenance.................... [REPAIRS_MAINTENANCE]
+12. Bad debts.................................. [BAD_DEBTS]
+13. Rent....................................... [RENT_EXPENSE]
+14. Taxes and licenses......................... [TAXES_LICENSES]
+15. Interest................................... [INTEREST_EXPENSE]
+16. Depreciation.............................. [DEPRECIATION]
+17. Depletion................................. [DEPLETION]
+18. Retirement plans, etc..................... [RETIREMENT_PLANS]
+19. Employee benefit programs................. [EMPLOYEE_BENEFITS]
+20. Other deductions.......................... [OTHER_DEDUCTIONS]
+21. TOTAL DEDUCTIONS.......................... [TOTAL_DEDUCTIONS]
+22. Ordinary business income (loss)........... [ORDINARY_BUSINESS_INCOME]
+
+SCHEDULE K - PARTNERS' DISTRIBUTIVE SHARE ITEMS
+1. Ordinary business income (loss)............ [ORDINARY_BUSINESS_INCOME]
+2. Net rental real estate income (loss)....... [RENTAL_REAL_ESTATE]
+3. Other net rental income (loss)............. [OTHER_RENTAL_INCOME]
+4. Guaranteed payments........................ [GUARANTEED_PAYMENTS]
+5. Interest income............................ [INTEREST_INCOME]
+6. Ordinary dividends......................... [ORDINARY_DIVIDENDS]
+7. Royalties.................................. [ROYALTIES]
+8. Net short-term capital gain (loss)........ [SHORT_TERM_CAPITAL_GAIN]
+9. Net long-term capital gain (loss)......... [LONG_TERM_CAPITAL_GAIN]
+10. Net section 1231 gain (loss)............. [SECTION_1231_GAIN]
+11. Other income (loss)...................... [OTHER_INCOME_K]
+12. Section 179 deduction.................... [SECTION_179]
+13. Other deductions......................... [OTHER_DEDUCTIONS_K]
+
+SCHEDULE L - BALANCE SHEETS
+Total assets at beginning of year............. [BEGINNING_ASSETS]
+Total assets at end of year................... [ENDING_ASSETS]
+Total liabilities at beginning of year....... [BEGINNING_LIABILITIES]
+Total liabilities at end of year............. [ENDING_LIABILITIES]

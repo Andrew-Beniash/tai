@@ -1,0 +1,34 @@
+MISSING INFORMATION REQUEST
+
+[CURRENT_DATE]
+
+[CLIENT_NAME]
+[CLIENT_ADDRESS]
+[CLIENT_CITY_STATE_ZIP]
+
+RE: [TAX_YEAR] TAX RETURN PREPARATION - MISSING INFORMATION
+
+Dear [CLIENT_CONTACT],
+
+We are currently preparing your [TAX_YEAR] [RETURN_TYPE] tax return. After reviewing the information you've provided, we've identified several items that are still needed to complete your return accurately.
+
+MISSING ITEMS:
+[MISSING_ITEMS_LIST]
+
+Please provide the above information by [DUE_DATE] to ensure timely filing of your return. If you have any questions or need clarification about these items, please don't hesitate to contact us.
+
+You can submit these documents:
+- Through our secure client portal
+- Via email to [PREPARER_EMAIL]
+- By fax to [OFFICE_FAX]
+- By mail to our office address
+
+Thank you for your prompt attention to this matter.
+
+Sincerely,
+
+[PREPARER_NAME]
+[PREPARER_TITLE]
+[FIRM_NAME]
+[FIRM_PHONE]
+[FIRM_EMAIL]
