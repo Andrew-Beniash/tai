@@ -3,6 +3,7 @@ Task service module.
 Handles operations related to tax tasks.
 """
 
+import logging
 from typing import List, Optional
 from uuid import uuid4
 
@@ -10,6 +11,8 @@ from app.models.task import Task, TaskCreate, TaskUpdate, TaskStatus
 from app.core.config import settings
 from .database_service import DatabaseService
 from .project_service import project_service
+
+logger = logging.getLogger(__name__)
 
 class TaskService(DatabaseService[Task]):
     """
@@ -94,16 +97,20 @@ class TaskService(DatabaseService[Task]):
         parameters = [{"name": "@project_id", "value": project_id}]
         return await self.query(query, parameters)
     
-    async def get_tasks_by_user(self, user_id: str) -> List[Task]:
+    async def get_tasks_by_user(self, user_id: str, project_id: Optional[str] = None) -> List[Task]:
         """
-        Get all tasks assigned to a user.
+        Get all tasks assigned to a user, optionally filtered by project.
         
         Args:
             user_id: User ID
+            project_id: Optional project ID filter
             
         Returns:
-            List of tasks assigned to the user
+            List of tasks assigned to the user (and project if specified)
         """
+        if project_id:
+            return await self.get_tasks_by_project_and_user(project_id, user_id)
+        
         query = "SELECT * FROM c WHERE c.assigned_to = @user_id"
         parameters = [{"name": "@user_id", "value": user_id}]
         return await self.query(query, parameters)
@@ -165,6 +172,118 @@ class TaskService(DatabaseService[Task]):
         
         task.status = status
         return await self.update(task_id, task)
+    
+    async def get_task_by_id(self, task_id: str) -> Optional[Task]:
+        """
+        Get a specific task by ID.
+        
+        Args:
+            task_id: Task ID
+            
+        Returns:
+            Task if found, None otherwise
+        """
+        return await self.get_by_id(task_id)
+    
+    async def delete_task(self, task_id: str) -> None:
+        """
+        Delete a task by ID.
+        
+        Args:
+            task_id: Task ID
+        """
+        await self.delete(task_id)
+    
+    async def initialize_sample_tasks(self) -> None:
+        """
+        Initialize sample tasks for the prototype.
+        
+        Creates example tasks for the sample projects if they don't already exist.
+        """
+        # Sample tasks data
+        sample_tasks = [
+            {
+                "task_id": "task-001",
+                "project_id": "proj-001",
+                "assigned_to": "jeff",
+                "client": "Acme Corp",
+                "tax_form": "1120",
+                "documents": [],
+                "status": TaskStatus.IN_PROGRESS,
+                "description": "Prepare Form 1120 for Acme Corp",
+                "due_date": "2025-04-15"
+            },
+            {
+                "task_id": "task-002",
+                "project_id": "proj-001",
+                "assigned_to": "hanna",
+                "client": "Acme Corp",
+                "tax_form": "1120",
+                "documents": [],
+                "status": TaskStatus.NOT_STARTED,
+                "description": "Review Form 1120 for Acme Corp",
+                "due_date": "2025-04-10"
+            },
+            {
+                "task_id": "task-003",
+                "project_id": "proj-002",
+                "assigned_to": "jeff",
+                "client": "Beta LLC",
+                "tax_form": "1065",
+                "documents": [],
+                "status": TaskStatus.NOT_STARTED,
+                "description": "Prepare Form 1065 for Beta LLC",
+                "due_date": "2025-04-12"
+            },
+            {
+                "task_id": "task-004",
+                "project_id": "proj-002",
+                "assigned_to": "hanna",
+                "client": "Beta LLC",
+                "tax_form": "1065",
+                "documents": [],
+                "status": TaskStatus.NOT_STARTED,
+                "description": "Review Form 1065 for Beta LLC",
+                "due_date": "2025-04-14"
+            },
+            {
+                "task_id": "task-005",
+                "project_id": "proj-003",
+                "assigned_to": "jeff",
+                "client": "Gamma Inc",
+                "tax_form": "1120S",
+                "documents": [],
+                "status": TaskStatus.READY_FOR_REVIEW,
+                "description": "Prepare Form 1120S for Gamma Inc",
+                "due_date": "2025-04-08"
+            },
+            {
+                "task_id": "task-006",
+                "project_id": "proj-003",
+                "assigned_to": "hanna",
+                "client": "Delta Corp",
+                "tax_form": "1120",
+                "documents": [],
+                "status": TaskStatus.NOT_STARTED,
+                "description": "Prepare Form 1120 for Delta Corp",
+                "due_date": "2025-04-20"
+            }
+        ]
+        
+        # Create each sample task if it doesn't exist
+        for task_data in sample_tasks:
+            task_id = task_data["task_id"]
+            existing_task = await self.get_by_id(task_id)
+            
+            if not existing_task:
+                # Create a new Task model
+                task = Task(**task_data)
+                await self.create(task)
+                logger.info(f"Created sample task: {task_id} - {task_data['description']}")
+                
+                # Add task to project (ensure relationship is maintained)
+                project_id = task_data["project_id"]
+                await project_service.add_task_to_project(project_id, task_id)
 
 
 # Create a global instance

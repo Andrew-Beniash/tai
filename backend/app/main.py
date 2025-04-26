@@ -64,6 +64,14 @@ async def startup_event():
         await user_service.initialize_hardcoded_users()
         logger.info("Hardcoded users initialized")
         
+        # Initialize sample projects for the prototype
+        await project_service.initialize_sample_projects()
+        logger.info("Sample projects initialized")
+        
+        # Initialize sample tasks for the prototype
+        await task_service.initialize_sample_tasks()
+        logger.info("Sample tasks initialized")
+        
         # Log successful startup
         logger.info("All services initialized successfully")
     except Exception as e:
