@@ -17,29 +17,33 @@ class Settings(BaseSettings):
     
     # Database settings
     DATABASE_URL: str = ""
+    USE_MOCK_DATABASE: bool = False
     
     # Azure Cosmos DB settings
-    AZURE_COSMOS_URI: str
-    AZURE_COSMOS_KEY: str
+    AZURE_COSMOS_URI: Optional[str] = None
+    AZURE_COSMOS_KEY: Optional[str] = None
     AZURE_COSMOS_DATABASE: str = "ai_tax_prototype"
     AZURE_COSMOS_CONTAINER_USERS: str = "users"
     AZURE_COSMOS_CONTAINER_PROJECTS: str = "projects"
     AZURE_COSMOS_CONTAINER_TASKS: str = "tasks"
     AZURE_COSMOS_CONTAINER_DOCUMENTS: str = "documents"
     
-    # OpenAI API settings
-    OPENAI_API_KEY: str
-    OPENAI_API_MODEL: str = "gpt-4-1106-preview"
-    
-    # Google Drive API settings
-    GOOGLE_APPLICATION_CREDENTIALS_JSON: str
-    GOOGLE_DRIVE_ROOT_FOLDER_ID: str
+    # Google Drive settings
+    USE_MOCK_DRIVE: bool = False
+    GOOGLE_APPLICATION_CREDENTIALS_JSON: Optional[str] = None
+    GOOGLE_DRIVE_ROOT_FOLDER_ID: Optional[str] = None
     GOOGLE_DRIVE_PROJECTS_FOLDER_ID: Optional[str] = None
     GOOGLE_DRIVE_TEMPLATES_FOLDER_ID: Optional[str] = None
     
-    # Azure Function URLs
-    AZURE_FUNCTION_BASE_URL: str
-    AZURE_FUNCTION_KEY: str
+    # Azure Function settings
+    USE_MOCK_FUNCTIONS: bool = False
+    AZURE_FUNCTION_BASE_URL: Optional[str] = None
+    AZURE_FUNCTION_KEY: Optional[str] = None
+    
+    # OpenAI API settings
+    USE_MOCK_OPENAI: bool = False
+    OPENAI_API_KEY: Optional[str] = None
+    OPENAI_API_MODEL: str = "gpt-4-1106-preview"
     
     # JWT token settings (for simulated auth)
     SECRET_KEY: str = "your_secret_key_for_jwt_token"  # Change in production
@@ -62,11 +66,18 @@ class Settings(BaseSettings):
         }
     }
     
-    @validator("GOOGLE_APPLICATION_CREDENTIALS_JSON")
-    def validate_google_credentials(cls, v):
-        """Validate that Google credentials JSON is valid."""
+    @validator("GOOGLE_APPLICATION_CREDENTIALS_JSON", pre=True)
+    def validate_google_credentials(cls, v, values):
+        """Validate that Google credentials JSON is valid if needed."""
+        if values.get("USE_MOCK_DRIVE", False):
+            return None
+            
+        if v is None:
+            return None
+            
         try:
-            json.loads(v)
+            if isinstance(v, str):
+                json.loads(v)
             return v
         except json.JSONDecodeError:
             raise ValueError("GOOGLE_APPLICATION_CREDENTIALS_JSON must be valid JSON")

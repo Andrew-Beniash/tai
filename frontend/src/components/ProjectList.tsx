@@ -74,6 +74,12 @@ export default function ProjectList({ projects, isLoading }: ProjectListProps) {
                       >
                         View Tasks
                       </Link>
+                      <Link 
+                        to={`/projects/${project.project_id}/documents`}
+                        className="text-blue-600 hover:text-blue-900"
+                      >
+                        Documents
+                      </Link>
                     </td>
                   </tr>
                 ))}

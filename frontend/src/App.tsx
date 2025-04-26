@@ -9,7 +9,7 @@ import LoginPage from './pages/LoginPage';
 import ProjectsPage from './pages/ProjectsPage';
 import TasksPage from './pages/TasksPage';
 import TaskDetailPage from './pages/TaskDetailPage';
-import Navbar from './components/Navbar';
+import DocumentsPage from './pages/DocumentsPage';
 
 // Protected route component that redirects to login if not authenticated
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
@@ -33,40 +33,45 @@ const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
 
 function AppRoutes() {
   return (
-    <>
-      <Navbar />
-      <div className="py-4">
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route 
-            path="/projects" 
-            element={
-              <ProtectedRoute>
-                <ProjectsPage />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/tasks" 
-            element={
-              <ProtectedRoute>
-                <TasksPage />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/tasks/:taskId" 
-            element={
-              <ProtectedRoute>
-                <TaskDetailPage />
-              </ProtectedRoute>
-            } 
-          />
-          <Route path="/" element={<Navigate to="/login" replace />} />
-          <Route path="*" element={<Navigate to="/login" replace />} />
-        </Routes>
-      </div>
-    </>
+    <div className="py-4">
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route 
+          path="/projects" 
+          element={
+            <ProtectedRoute>
+              <ProjectsPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/projects/:projectId/documents" 
+          element={
+            <ProtectedRoute>
+              <DocumentsPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/tasks" 
+          element={
+            <ProtectedRoute>
+              <TasksPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/tasks/:taskId" 
+          element={
+            <ProtectedRoute>
+              <TaskDetailPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    </div>
   );
 }
 

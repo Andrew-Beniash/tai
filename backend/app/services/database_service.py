@@ -6,17 +6,22 @@ Provides common database operations for all models.
 from typing import Type, TypeVar, Generic, List, Optional, Dict, Any
 from pydantic import BaseModel
 
-from app.core.cosmos_client import CosmosRepository, cosmos_client
 from app.core.config import settings
 
 # Type variable for generic model type
 T = TypeVar('T', bound=BaseModel)
 
+# Choose the right implementation based on config
+if settings.USE_MOCK_DATABASE:
+    from app.core.mock.mock_database import MockRepository as Repository, mock_client as db_client
+else:
+    from app.core.cosmos_client import CosmosRepository as Repository, cosmos_client as db_client
+
 class DatabaseService(Generic[T]):
     """
     Base database service with common operations for all models.
     
-    This service uses CosmosRepository to handle the actual database operations
+    This service uses either CosmosRepository or MockRepository to handle the actual database operations
     and provides a consistent interface for all model services.
     """
     
@@ -30,11 +35,12 @@ class DatabaseService(Generic[T]):
         
         Args:
             model_class: Pydantic model class
-            container_name: Name of the container in Cosmos DB
+            container_name: Name of the container in Cosmos DB or mock DB
         """
         self.model_class = model_class
-        self.repository = CosmosRepository(
-            cosmos_client=cosmos_client,
+        self.repository = Repository(
+            cosmos_client=db_client if not settings.USE_MOCK_DATABASE else None,
+            mock_client=db_client if settings.USE_MOCK_DATABASE else None,
             container_name=container_name,
             model_class=model_class
         )

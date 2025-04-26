@@ -1,162 +1,158 @@
 """
-Google Drive API client for accessing and managing documents.
-Handles authentication, file operations, and folder structure for the tax prototype.
+Google Drive client for the application.
+Handles connection and operations with Google Drive API.
 """
 
-import os
+import logging
 import json
-import tempfile
 import io
-from typing import List, Dict, Optional, Union
+from typing import Dict, Any, List, Optional
+from .config import settings
 
-from google.oauth2 import service_account
-from googleapiclient.discovery import build
-from googleapiclient.http import MediaIoBaseDownload, MediaFileUpload
+# Only import Google Drive libraries if we're not using mock
+if not settings.USE_MOCK_DRIVE:
+    try:
+        from googleapiclient.discovery import build
+        from googleapiclient.http import MediaIoBaseUpload, MediaIoBaseDownload
+        from google.oauth2 import service_account
+    except ImportError:
+        logging.error("Google Drive libraries not installed. Install with: pip install google-api-python-client google-auth google-auth-httplib2 google-auth-oauthlib")
 
-from app.core.config import settings
 
-class DriveClient:
+class GoogleDriveClient:
     """Client for Google Drive API operations."""
     
     def __init__(self):
-        """Initialize Google Drive API client with service account credentials."""
-        # Load credentials from environment variable
-        credentials_json = json.loads(settings.GOOGLE_APPLICATION_CREDENTIALS_JSON)
+        """Initialize Google Drive client with credentials."""
+        # Parse credentials from JSON string
+        if not settings.GOOGLE_APPLICATION_CREDENTIALS_JSON:
+            raise ValueError("GOOGLE_APPLICATION_CREDENTIALS_JSON is not set")
+            
+        credentials_dict = json.loads(settings.GOOGLE_APPLICATION_CREDENTIALS_JSON)
         
-        # Create credentials object
+        # Create credentials from dict
         credentials = service_account.Credentials.from_service_account_info(
-            credentials_json,
+            credentials_dict,
             scopes=['https://www.googleapis.com/auth/drive']
         )
         
-        # Build the Google Drive service
+        # Build the Drive API client
         self.service = build('drive', 'v3', credentials=credentials)
-        
-        # Folder IDs for project storage
-        self.root_folder_id = settings.GOOGLE_DRIVE_ROOT_FOLDER_ID
-        self.projects_folder_id = getattr(settings, 'GOOGLE_DRIVE_PROJECTS_FOLDER_ID', self.root_folder_id)
-        self.templates_folder_id = getattr(settings, 'GOOGLE_DRIVE_TEMPLATES_FOLDER_ID', None)
+        logging.info("Google Drive client initialized successfully")
     
-    def list_project_folders(self) -> List[Dict]:
-        """List all project folders in the projects directory."""
-        query = f"'{self.projects_folder_id}' in parents and mimeType='application/vnd.google-apps.folder'"
+    def list_files(self, folder_id: str) -> List[Dict[str, Any]]:
+        """
+        List files in a folder.
+        
+        Args:
+            folder_id: Folder ID
+            
+        Returns:
+            List of file metadata
+        """
+        query = f"'{folder_id}' in parents and trashed = false"
+        fields = "files(id, name, mimeType, createdTime, modifiedTime)"
+        
         results = self.service.files().list(
             q=query,
-            fields="files(id, name)"
+            fields=fields,
+            pageSize=100
         ).execute()
         
         return results.get('files', [])
     
-    def get_folder_by_project_id(self, project_id: str) -> Optional[Dict]:
-        """Get Google Drive folder for a specific project ID."""
-        # Assuming folder names match project IDs
-        query = f"'{self.projects_folder_id}' in parents and name='Project-{project_id}' and mimeType='application/vnd.google-apps.folder'"
-        results = self.service.files().list(
-            q=query,
-            fields="files(id, name)"
-        ).execute()
+    def get_file_content(self, file_id: str) -> Optional[bytes]:
+        """
+        Get file content.
         
-        files = results.get('files', [])
-        return files[0] if files else None
-    
-    def list_files_in_folder(self, folder_id: str) -> List[Dict]:
-        """List all files in a specific folder."""
-        query = f"'{folder_id}' in parents and mimeType!='application/vnd.google-apps.folder'"
-        results = self.service.files().list(
-            q=query,
-            fields="files(id, name, mimeType, modifiedTime, size)"
-        ).execute()
-        
-        return results.get('files', [])
-    
-    def get_file_content(self, file_id: str) -> bytes:
-        """Download and return the content of a file."""
-        request = self.service.files().get_media(fileId=file_id)
-        
-        file_content = io.BytesIO()
-        downloader = MediaIoBaseDownload(file_content, request)
-        
-        done = False
-        while not done:
-            status, done = downloader.next_chunk()
-        
-        file_content.seek(0)
-        return file_content.read()
-    
-    def upload_file(self, filename: str, content: Union[str, bytes], folder_id: str) -> Dict:
-        """Upload a file to a specific folder."""
-        # Create a temporary file
-        with tempfile.NamedTemporaryFile(delete=False) as temp_file:
-            if isinstance(content, str):
-                temp_file.write(content.encode('utf-8'))
-            else:
-                temp_file.write(content)
-            temp_file_path = temp_file.name
-        
+        Args:
+            file_id: File ID
+            
+        Returns:
+            File content as bytes if found, None otherwise
+        """
         try:
-            # Upload the file
-            file_metadata = {
-                'name': filename,
-                'parents': [folder_id]
-            }
+            # Get file metadata to check if it exists
+            file = self.service.files().get(fileId=file_id).execute()
+            if not file:
+                return None
             
-            # Determine MIME type (simple implementation)
-            mime_type = 'application/octet-stream'
-            if filename.endswith('.pdf'):
-                mime_type = 'application/pdf'
-            elif filename.endswith('.docx'):
-                mime_type = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-            elif filename.endswith('.xlsx'):
-                mime_type = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-            elif filename.endswith('.txt'):
-                mime_type = 'text/plain'
+            # Download file content
+            request = self.service.files().get_media(fileId=file_id)
+            file_handle = io.BytesIO()
+            downloader = MediaIoBaseDownload(file_handle, request)
             
-            # Create media file upload
-            media = MediaFileUpload(
-                temp_file_path,
-                mimetype=mime_type,
-                resumable=True
-            )
+            done = False
+            while not done:
+                status, done = downloader.next_chunk()
             
-            # Execute the upload
-            file = self.service.files().create(
-                body=file_metadata,
-                media_body=media,
-                fields='id,name,mimeType,webViewLink'
-            ).execute()
-            
-            return file
-        finally:
-            # Clean up the temporary file
-            os.unlink(temp_file_path)
+            file_handle.seek(0)
+            return file_handle.read()
+        except Exception as e:
+            logging.error(f"Error getting file content for {file_id}: {str(e)}")
+            return None
     
-    def create_project_folder(self, project_id: str) -> Dict:
-        """Create a new folder for a project."""
-        folder_metadata = {
-            'name': f'Project-{project_id}',
-            'mimeType': 'application/vnd.google-apps.folder',
-            'parents': [self.projects_folder_id]
+    def get_file_metadata(self, file_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get file metadata.
+        
+        Args:
+            file_id: File ID
+            
+        Returns:
+            File metadata if found, None otherwise
+        """
+        try:
+            return self.service.files().get(
+                fileId=file_id,
+                fields="id, name, mimeType, createdTime, modifiedTime"
+            ).execute()
+        except Exception as e:
+            logging.error(f"Error getting file metadata for {file_id}: {str(e)}")
+            return None
+    
+    def create_file(self, name: str, content: bytes, parent_id: str, mime_type: str) -> Dict[str, Any]:
+        """
+        Create a new file.
+        
+        Args:
+            name: File name
+            content: File content
+            parent_id: Parent folder ID
+            mime_type: MIME type
+            
+        Returns:
+            File metadata
+        """
+        file_metadata = {
+            'name': name,
+            'parents': [parent_id]
         }
         
-        folder = self.service.files().create(
-            body=folder_metadata,
-            fields='id,name'
+        media = MediaIoBaseUpload(
+            io.BytesIO(content),
+            mimetype=mime_type,
+            resumable=True
+        )
+        
+        file = self.service.files().create(
+            body=file_metadata,
+            media_body=media,
+            fields='id, name, mimeType, createdTime, modifiedTime'
         ).execute()
         
-        return folder
-        
-    def list_form_templates(self) -> List[Dict]:
-        """List all form templates available in the templates folder."""
-        if not self.templates_folder_id:
-            return []
-            
-        query = f"'{self.templates_folder_id}' in parents and mimeType!='application/vnd.google-apps.folder'"
-        results = self.service.files().list(
-            q=query,
-            fields="files(id, name, mimeType, modifiedTime)"
-        ).execute()
-        
-        return results.get('files', [])
+        return file
 
-# Create a global instance for import
-drive_client = DriveClient()
+
+# Use the appropriate client based on configuration
+try:
+    if settings.USE_MOCK_DRIVE:
+        from .mock.mock_drive import mock_drive_client as drive_client
+        logging.info("Using mock Google Drive client")
+    else:
+        drive_client = GoogleDriveClient()
+        logging.info("Using real Google Drive client")
+except Exception as e:
+    logging.error(f"Error initializing Google Drive client: {str(e)}")
+    logging.warning("Falling back to mock Google Drive client")
+    from .mock.mock_drive import mock_drive_client as drive_client
