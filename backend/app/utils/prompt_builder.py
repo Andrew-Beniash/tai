@@ -91,3 +91,42 @@ Please provide a helpful response based on the available information.
 """
     
     return system_prompt, user_prompt
+
+async def build_rag_context(documents: List[DocumentResponse], query: str) -> str:
+    """
+    Build a contextualized RAG (Retrieval-Augmented Generation) context for the AI.
+    This extracts relevant information from documents based on the query.
+    
+    Args:
+        documents: List of documents to extract information from
+        query: The user's query to guide extraction
+        
+    Returns:
+        Formatted context string with relevant information
+    """
+    logger.info(f"Building RAG context from {len(documents)} documents")
+    
+    # Extract keywords from the query
+    keywords = query.lower().split()
+    # Add common tax terms as keywords
+    tax_keywords = ["tax", "income", "deduction", "credit", "expense", "form", "schedule", "irs"]
+    keywords.extend(tax_keywords)
+    
+    context = ""
+    
+    for i, doc in enumerate(documents[:5]):  # Limit to 5 documents
+        # Get document text
+        doc_text = await extract_document_text(doc.doc_id, doc.filename)
+        
+        # Extract relevant excerpts based on keywords
+        excerpts = extract_key_info(doc_text, keywords, context_size=150)
+        
+        if excerpts:
+            context += f"\n### {doc.filename} ###\n"
+            for excerpt in excerpts[:3]:  # Limit to 3 excerpts per document
+                context += f"{excerpt}\n\n"
+    
+    if not context:
+        context = "No relevant information found in the provided documents."
+    
+    return context

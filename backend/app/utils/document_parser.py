@@ -123,6 +123,79 @@ MISSING ITEMS:
 - Officer compensation documentation
 - Final depreciation schedules
 - Foreign income statements
+""",
+    "form_1120_template.docx": """
+FORM 1120 - U.S. Corporation Income Tax Return
+Tax Year: 2024
+
+Part I: Income
+1. Gross receipts or sales: _______
+2. Returns and allowances: _______
+3. Cost of goods sold: _______
+4. Gross profit (subtract line 3 from line 1c): _______
+5. Dividends: _______
+6. Interest: _______
+7. Gross rents: _______
+8. Gross royalties: _______
+9. Capital gain net income: _______
+10. Net gain or (loss) from Form 4797: _______
+
+Part II: Deductions
+12. Compensation of officers: _______
+13. Salaries and wages: _______
+14. Repairs and maintenance: _______
+15. Bad debts: _______
+16. Rents: _______
+17. Taxes and licenses: _______
+18. Interest: _______
+19. Charitable contributions: _______
+20. Depreciation: _______
+21. Depletion: _______
+22. Advertising: _______
+23. Pension, profit-sharing plans: _______
+
+Part III: Tax Computation
+31. Taxable income: _______
+32. Total tax: _______
+""",
+    "form_1065_template.docx": """
+FORM 1065 - U.S. Return of Partnership Income
+Tax Year: 2024
+
+Part I: Income
+1. Gross receipts or sales: _______
+2. Returns and allowances: _______
+3. Cost of goods sold: _______
+4. Gross profit (subtract line 3 from line 1c): _______
+5. Ordinary income (loss) from other partnerships: _______
+6. Net farm profit (loss): _______
+7. Net gain (loss) from Form 4797: _______
+8. Other income (loss): _______
+
+Part II: Deductions
+9. Salaries and wages: _______
+10. Guaranteed payments to partners: _______
+11. Repairs and maintenance: _______
+12. Bad debts: _______
+13. Rent: _______
+14. Taxes and licenses: _______
+15. Interest: _______
+16. Depreciation: _______
+17. Depletion: _______
+18. Retirement plans: _______
+19. Employee benefit programs: _______
+20. Other deductions: _______
+
+Schedule K: Partners' Distributive Share Items
+1. Ordinary business income (loss): _______
+2. Net rental real estate income (loss): _______
+3. Other net rental income (loss): _______
+4. Guaranteed payments: _______
+5. Interest income: _______
+6. Dividends: _______
+7. Royalties: _______
+8. Net short-term capital gain (loss): _______
+9. Net long-term capital gain (loss): _______
 """
 }
 
@@ -184,7 +257,7 @@ async def extract_pdf_text(drive_client, doc_id: str) -> str:
     """
     # In a real app, would download PDF from Drive and use a library like PyPDF2
     logger.info(f"PDF extraction not implemented for {doc_id} - would download and parse")
-    return "[PDF content would be extracted here]"
+    return "[PDF content would be extracted here in a production environment]"
 
 async def extract_docx_text(drive_client, doc_id: str) -> str:
     """
@@ -200,7 +273,7 @@ async def extract_docx_text(drive_client, doc_id: str) -> str:
     """
     # In a real app, would download DOCX from Drive and use a library like python-docx
     logger.info(f"DOCX extraction not implemented for {doc_id} - would download and parse")
-    return "[DOCX content would be extracted here]"
+    return "[DOCX content would be extracted here in a production environment]"
 
 async def extract_xlsx_text(drive_client, doc_id: str) -> str:
     """
@@ -216,7 +289,7 @@ async def extract_xlsx_text(drive_client, doc_id: str) -> str:
     """
     # In a real app, would download XLSX from Drive and use a library like pandas
     logger.info(f"XLSX extraction not implemented for {doc_id} - would download and parse")
-    return "[XLSX content would be extracted here]"
+    return "[XLSX content would be extracted here in a production environment]"
 
 async def extract_text_file(drive_client, doc_id: str) -> str:
     """
@@ -232,4 +305,32 @@ async def extract_text_file(drive_client, doc_id: str) -> str:
     """
     # In a real app, would download text file from Drive
     logger.info(f"Text file extraction not implemented for {doc_id} - would download")
-    return "[Text file content would be extracted here]"
+    return "[Text file content would be extracted here in a production environment]"
+
+async def get_document_preview(doc_id: str, filename: str, max_length: int = 500) -> str:
+    """
+    Get a preview of a document's content.
+    
+    Args:
+        doc_id: The document ID
+        filename: The filename
+        max_length: Maximum length of preview
+        
+    Returns:
+        Document preview
+    """
+    try:
+        # Get full document text
+        full_text = await extract_document_text(doc_id, filename)
+        
+        # Trim to max length
+        if len(full_text) > max_length:
+            preview = full_text[:max_length] + "..."
+        else:
+            preview = full_text
+            
+        return preview
+    
+    except Exception as e:
+        logger.error(f"Error getting document preview: {str(e)}")
+        return f"[Error getting preview: {str(e)}]"

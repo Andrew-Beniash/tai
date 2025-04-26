@@ -3,19 +3,22 @@ OpenAI API client for generating AI responses and recommendations.
 Handles model selection, prompt generation, and response parsing.
 """
 
-import openai
-from typing import List, Dict, Any, Optional
+import logging
+from typing import List, Dict, Any, Optional, Tuple
+from openai import AsyncOpenAI
 from app.core.config import settings
 
-# Configure OpenAI API
-openai.api_key = settings.OPENAI_API_KEY
+# Configure logging
+logger = logging.getLogger(__name__)
 
 class OpenAIClient:
     """Client for OpenAI API operations."""
     
     def __init__(self):
         """Initialize OpenAI API client with API key from settings."""
+        self.client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
         self.model = settings.OPENAI_API_MODEL
+        logger.info(f"Initialized OpenAI client with model: {self.model}")
     
     async def generate_chat_response(
         self, 
@@ -115,16 +118,20 @@ class OpenAIClient:
         Returns:
             Response content from the API
         """
-        response = await openai.ChatCompletion.acreate(
-            model=self.model,
-            messages=messages,
-            max_tokens=2000,
-            temperature=0.3,
-        )
-        
-        return response.choices[0].message.content
+        try:
+            response = await self.client.chat.completions.create(
+                model=self.model,
+                messages=messages,
+                max_tokens=2000,
+                temperature=0.3,
+            )
+            
+            return response.choices[0].message.content
+        except Exception as e:
+            logger.error(f"Error calling OpenAI API: {str(e)}")
+            raise Exception(f"OpenAI API error: {str(e)}")
     
-    def _parse_response_for_actions(self, response_text: str) -> tuple[str, List[Dict[str, str]]]:
+    def _parse_response_for_actions(self, response_text: str) -> Tuple[str, List[Dict[str, str]]]:
         """
         Parse the response text to extract recommended actions.
         
@@ -157,3 +164,12 @@ class OpenAIClient:
 
 # Create a global instance for import
 openai_client = OpenAIClient()
+
+def get_openai_client() -> OpenAIClient:
+    """
+    Get the OpenAI client instance.
+    
+    Returns:
+        OpenAI client instance
+    """
+    return openai_client

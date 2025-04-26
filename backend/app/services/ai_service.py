@@ -7,7 +7,6 @@ document content, and user messages.
 import logging
 import json
 from typing import List, Dict, Any, Optional
-import openai
 
 from app.core.config import settings
 from app.core.openai_client import get_openai_client
@@ -26,6 +25,7 @@ class AIService:
         """Initialize the AI service."""
         self.client = get_openai_client()
         self.model = settings.OPENAI_API_MODEL
+        logger.info(f"Initialized AI service with model: {self.model}")
         
         # Define preset questions by tax form type
         self.preset_questions = {
@@ -78,9 +78,11 @@ class AIService:
         try:
             # Build prompt with context
             system_prompt, user_prompt = await build_prompt(message, task, documents)
+            logger.debug(f"System prompt: {system_prompt[:100]}...")
+            logger.debug(f"User prompt: {user_prompt[:100]}...")
             
             # Call OpenAI API
-            response = await self.client.chat.completions.create(
+            response = await self.client.client.chat.completions.create(
                 model=self.model,
                 messages=[
                     {"role": "system", "content": system_prompt},
@@ -95,9 +97,11 @@ class AIService:
             
             # Extract response text
             ai_response = response.choices[0].message.content.strip()
+            logger.debug(f"AI response: {ai_response[:100]}...")
             
             # Extract suggested actions from response
             suggested_actions = extract_actions_from_response(ai_response)
+            logger.info(f"Extracted {len(suggested_actions)} suggested actions")
             
             # Return formatted response
             return {
