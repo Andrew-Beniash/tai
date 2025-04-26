@@ -1,124 +1,75 @@
-import React, { useState, useEffect } from 'react';
-import { AvailableAction, executeAction, getAvailableActions } from '../api/actions';
+/**
+ * ActionButtons component
+ * Displays and handles AI-suggested actions for a task
+ */
+
+import { useState, useEffect } from 'react';
+import { AvailableAction, executeAction } from '../api/actions';
 
 interface ActionButtonsProps {
   taskId: string;
-  onActionComplete: (result: any) => void;
-  suggestedActionId?: string; // Optional, for when AI suggests a specific action
+  suggestedActionId?: string;
+  onActionComplete: (success: boolean, message: string) => void;
 }
 
-/**
- * Component that displays buttons for available actions on a task
- * Allows user to execute actions recommended by the AI
- */
-const ActionButtons: React.FC<ActionButtonsProps> = ({ 
-  taskId, 
-  onActionComplete,
-  suggestedActionId 
-}) => {
+export default function ActionButtons({ taskId, suggestedActionId, onActionComplete }: ActionButtonsProps) {
   const [availableActions, setAvailableActions] = useState<AvailableAction[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [executing, setExecuting] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Load available actions when component mounts or taskId changes
-  useEffect(() => {
-    if (taskId) {
-      fetchAvailableActions();
-    }
-  }, [taskId]);
-
-  const fetchAvailableActions = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const actions = await getAvailableActions(taskId);
-      setAvailableActions(actions);
-    } catch (err) {
-      setError('Failed to load available actions');
-      console.error('Error loading actions:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  
+  // Execute the suggested action
   const handleExecuteAction = async (actionId: string) => {
-    setExecuting(true);
+    setIsLoading(true);
     setError(null);
+    
     try {
-      // For demo, using empty params - in a real app, you'd collect required params
-      const actionResult = await executeAction(taskId, {
-        action_id: actionId
-      });
+      const result = await executeAction(taskId, { action_id: actionId });
       
-      if (actionResult.success) {
-        onActionComplete(actionResult.result);
+      if (result.success) {
+        onActionComplete(true, result.message);
       } else {
-        setError(actionResult.message);
+        setError(`Action failed: ${result.message}`);
+        onActionComplete(false, result.message);
       }
     } catch (err) {
-      setError('Failed to execute action');
+      const errorMessage = 'Failed to execute action. Please try again.';
+      setError(errorMessage);
+      onActionComplete(false, errorMessage);
       console.error('Error executing action:', err);
     } finally {
-      setExecuting(false);
+      setIsLoading(false);
     }
   };
-
-  // Highlight suggested action, if provided
-  const getButtonClassName = (actionId: string) => {
-    const baseClass = "px-4 py-2 rounded text-white font-medium transition-colors";
-    if (suggestedActionId === actionId) {
-      return `${baseClass} bg-green-600 hover:bg-green-700 border-2 border-green-400`;
-    }
-    return `${baseClass} bg-blue-600 hover:bg-blue-700`;
-  };
-
-  if (loading) {
-    return <div className="text-center">Loading actions...</div>;
+  
+  // Find the current suggested action from available actions
+  const suggestedAction = availableActions.find(action => action.action_id === suggestedActionId);
+  
+  // If there's no suggested action, or we couldn't find it, don't render anything
+  if (!suggestedActionId || !suggestedAction) {
+    return null;
   }
-
-  if (error) {
-    return (
-      <div className="text-red-500 p-2 rounded bg-red-50 border border-red-200">
-        Error: {error}
-        <button 
-          className="ml-2 text-blue-500 underline" 
-          onClick={fetchAvailableActions}
+  
+  return (
+    <div className="mt-4">
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded-lg mb-4">
+          {error}
+        </div>
+      )}
+      
+      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+        <h4 className="text-sm font-medium text-gray-700 mb-2">Suggested Action:</h4>
+        <div className="mb-3">
+          <p className="text-sm text-gray-600">{suggestedAction.description}</p>
+        </div>
+        <button
+          onClick={() => handleExecuteAction(suggestedAction.action_id)}
+          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+          disabled={isLoading}
         >
-          Retry
+          {isLoading ? 'Processing...' : `Execute: ${suggestedAction.action_name}`}
         </button>
       </div>
-    );
-  }
-
-  return (
-    <div className="my-4">
-      <h3 className="text-lg font-semibold mb-2">
-        {suggestedActionId ? 'Suggested Action:' : 'Available Actions:'}
-      </h3>
-      
-      <div className="flex flex-wrap gap-2">
-        {availableActions.map(action => (
-          <button
-            key={action.action_id}
-            className={getButtonClassName(action.action_id)}
-            onClick={() => handleExecuteAction(action.action_id)}
-            disabled={executing}
-            title={action.description}
-          >
-            {action.action_name}
-            {executing && action.action_id === suggestedActionId && (
-              <span className="ml-2">...</span>
-            )}
-          </button>
-        ))}
-      </div>
-      
-      {executing && (
-        <div className="mt-2 text-gray-600">Executing action, please wait...</div>
-      )}
     </div>
   );
-};
-
-export default ActionButtons;
+}

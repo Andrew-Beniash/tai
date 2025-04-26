@@ -1,175 +1,222 @@
-import React, { useState, useEffect, useRef } from 'react';
-import ActionButtons from './ActionButtons';
+/**
+ * ChatWidget component
+ * Provides an interface for interacting with the AI assistant
+ * Includes chat history, message input, and action handling
+ */
 
-interface Message {
-  id: string;
-  type: 'user' | 'ai';
+import { useState, useEffect, useRef } from 'react';
+import { sendChatMessage, ChatResponse, getPresetQuestions } from '../api/chat';
+import { executeAction, ActionRequest } from '../api/actions';
+
+interface ChatWidgetProps {
+  taskId: string;
+}
+
+interface ChatMessage {
+  sender: 'user' | 'ai';
   content: string;
   timestamp: Date;
   suggestedActionId?: string;
 }
 
-interface ChatWidgetProps {
-  taskId: string;
-  onSendMessage: (message: string) => Promise<{
-    response: string;
-    suggestedActionId?: string;
-  }>;
-  presetQuestions?: string[];
-}
-
-/**
- * Chat widget component that allows users to interact with AI assistant
- * Supports text input, preset questions, and executing suggested actions
- */
-const ChatWidget: React.FC<ChatWidgetProps> = ({ 
-  taskId, 
-  onSendMessage,
-  presetQuestions = []
-}) => {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [inputValue, setInputValue] = useState('');
+export default function ChatWidget({ taskId }: ChatWidgetProps) {
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [currentActionId, setCurrentActionId] = useState<string | undefined>();
+  const [error, setError] = useState<string | null>(null);
+  const [presetQuestions, setPresetQuestions] = useState<string[]>([]);
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
-  // Scroll to bottom of chat whenever messages change
+  // Fetch preset questions when component mounts
   useEffect(() => {
-    scrollToBottom();
+    const fetchPresetQuestions = async () => {
+      try {
+        const questions = await getPresetQuestions(taskId);
+        setPresetQuestions(questions);
+      } catch (err) {
+        console.error('Error fetching preset questions:', err);
+      }
+    };
+    
+    fetchPresetQuestions();
+  }, [taskId]);
+  
+  // Add initial greeting message when component mounts
+  useEffect(() => {
+    setMessages([
+      {
+        sender: 'ai',
+        content: 'Hello! I\'m your AI tax assistant. How can I help you with this task today?',
+        timestamp: new Date(),
+      }
+    ]);
+  }, []);
+  
+  // Scroll to bottom of chat when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
   
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-  
-  const handleSendMessage = async (content: string) => {
-    if (!content.trim() || isLoading) return;
+  const handleSendMessage = async () => {
+    if (!inputMessage.trim()) return;
     
-    // Add user message to chat
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      type: 'user',
-      content,
-      timestamp: new Date()
+    const userMessage: ChatMessage = {
+      sender: 'user',
+      content: inputMessage,
+      timestamp: new Date(),
     };
     
     setMessages(prev => [...prev, userMessage]);
-    setInputValue('');
+    setInputMessage('');
+    setError(null);
     setIsLoading(true);
     
     try {
-      // Send message to backend
-      const { response, suggestedActionId } = await onSendMessage(content);
+      const response = await sendChatMessage(taskId, userMessage.content);
       
-      // Add AI response to chat
-      const aiMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        type: 'ai',
-        content: response,
+      const aiMessage: ChatMessage = {
+        sender: 'ai',
+        content: response.response,
         timestamp: new Date(),
-        suggestedActionId
+        suggestedActionId: response.suggestedActionId,
       };
       
       setMessages(prev => [...prev, aiMessage]);
-      
-      // If AI suggests an action, set it as the current action
-      if (suggestedActionId) {
-        setCurrentActionId(suggestedActionId);
-      }
-    } catch (error) {
-      console.error('Error sending message:', error);
-      
-      // Add error message
-      const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        type: 'ai',
-        content: 'Sorry, there was an error processing your request. Please try again.',
-        timestamp: new Date()
-      };
-      
-      setMessages(prev => [...prev, errorMessage]);
+    } catch (err) {
+      setError('Failed to get a response from the AI assistant. Please try again.');
+      console.error('Error sending message:', err);
     } finally {
       setIsLoading(false);
     }
   };
   
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSendMessage(inputValue);
+      handleSendMessage();
     }
   };
   
-  const handleActionComplete = (result: any) => {
-    // Add message about completed action
-    const actionMessage: Message = {
-      id: Date.now().toString(),
-      type: 'ai',
-      content: `Action completed successfully! ${result?.documentUrl ? `Generated document: ${result.documentUrl}` : ''}`,
-      timestamp: new Date()
-    };
-    
-    setMessages(prev => [...prev, actionMessage]);
-    setCurrentActionId(undefined);
+  const handlePresetQuestion = async (question: string) => {
+    setInputMessage(question);
+    // Wait for state update to complete before sending
+    setTimeout(() => {
+      handleSendMessage();
+    }, 0);
   };
   
-  return (
-    <div className="flex flex-col h-full border rounded-lg shadow-sm bg-white">
-      {/* Chat header */}
-      <div className="p-3 border-b bg-gray-50">
-        <h2 className="text-lg font-semibold">AI Assistant - Task #{taskId}</h2>
-      </div>
+  const handleExecuteAction = async (actionId: string) => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const actionRequest: ActionRequest = {
+        action_id: actionId,
+      };
       
-      {/* Messages container */}
-      <div className="flex-1 p-4 overflow-y-auto">
-        {messages.length === 0 ? (
-          <div className="text-center text-gray-500 my-4">
-            Ask a question about this task or use one of the preset questions below.
+      const result = await executeAction(taskId, actionRequest);
+      
+      if (result.success) {
+        // Add a system message about the successful action
+        const systemMessage: ChatMessage = {
+          sender: 'ai',
+          content: `✅ Action completed successfully: ${result.message}`,
+          timestamp: new Date(),
+        };
+        
+        setMessages(prev => [...prev, systemMessage]);
+      } else {
+        setError(`Action failed: ${result.message}`);
+      }
+    } catch (err) {
+      setError('Failed to execute action. Please try again.');
+      console.error('Error executing action:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // Function to render chat message based on type
+  const renderMessage = (message: ChatMessage, index: number) => {
+    if (message.sender === 'user') {
+      return (
+        <div key={index} className="flex justify-end mb-4">
+          <div className="bg-blue-600 text-white rounded-lg py-2 px-4 max-w-md">
+            <p>{message.content}</p>
+            <p className="text-xs text-blue-200 mt-1 text-right">
+              {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </p>
           </div>
-        ) : (
-          messages.map(message => (
-            <div 
-              key={message.id} 
-              className={`mb-4 ${message.type === 'user' ? 'text-right' : 'text-left'}`}
-            >
-              <div 
-                className={`inline-block p-3 rounded-lg ${
-                  message.type === 'user' 
-                    ? 'bg-blue-500 text-white' 
-                    : 'bg-gray-100 text-gray-800'
-                }`}
+        </div>
+      );
+    } else {
+      return (
+        <div key={index} className="flex justify-start mb-4">
+          <div className="bg-gray-200 rounded-lg py-2 px-4 max-w-md">
+            <p className="whitespace-pre-wrap">{message.content}</p>
+            
+            {/* Suggested Action Button (if present) */}
+            {message.suggestedActionId && (
+              <button
+                onClick={() => handleExecuteAction(message.suggestedActionId!)}
+                className="mt-2 inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                disabled={isLoading}
               >
-                {message.content}
+                {isLoading ? 'Processing...' : 'Execute Suggested Action'}
+              </button>
+            )}
+            
+            <p className="text-xs text-gray-500 mt-1">
+              {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </p>
+          </div>
+        </div>
+      );
+    }
+  };
+
+  return (
+    <div className="flex flex-col bg-white rounded-lg shadow">
+      {/* Chat Messages */}
+      <div className="flex-1 p-4 overflow-y-auto h-80 border border-gray-200 rounded-t-lg">
+        {messages.map((message, index) => renderMessage(message, index))}
+        
+        {/* Loading indicator */}
+        {isLoading && (
+          <div className="flex justify-start mb-4">
+            <div className="bg-gray-200 rounded-lg py-2 px-4">
+              <div className="flex space-x-2">
+                <div className="bg-gray-500 rounded-full h-2 w-2 animate-bounce"></div>
+                <div className="bg-gray-500 rounded-full h-2 w-2 animate-bounce delay-100"></div>
+                <div className="bg-gray-500 rounded-full h-2 w-2 animate-bounce delay-200"></div>
               </div>
-              <div className="text-xs text-gray-500 mt-1">
-                {message.timestamp.toLocaleTimeString()}
-              </div>
-              
-              {/* Show action buttons if this message has a suggested action */}
-              {message.type === 'ai' && message.suggestedActionId && (
-                <div className="mt-2">
-                  <ActionButtons 
-                    taskId={taskId}
-                    suggestedActionId={message.suggestedActionId}
-                    onActionComplete={handleActionComplete}
-                  />
-                </div>
-              )}
             </div>
-          ))
+          </div>
         )}
+        
+        {/* Error message */}
+        {error && (
+          <div className="flex justify-center mb-4">
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded-lg">
+              {error}
+            </div>
+          </div>
+        )}
+        
         <div ref={messagesEndRef} />
       </div>
       
-      {/* Preset questions */}
+      {/* Preset Questions */}
       {presetQuestions.length > 0 && (
-        <div className="p-3 border-t bg-gray-50">
+        <div className="px-4 py-3 border-l border-r border-gray-200">
+          <h4 className="text-sm font-medium text-gray-700 mb-2">Quick Questions:</h4>
           <div className="flex flex-wrap gap-2">
             {presetQuestions.map((question, index) => (
               <button
                 key={index}
-                className="px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded text-sm"
-                onClick={() => handleSendMessage(question)}
+                onClick={() => handlePresetQuestion(question)}
+                className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-full text-sm text-gray-700"
                 disabled={isLoading}
               >
                 {question}
@@ -179,29 +226,28 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
         </div>
       )}
       
-      {/* Input area */}
-      <div className="p-3 border-t">
+      {/* Message Input */}
+      <div className="border border-gray-200 rounded-b-lg p-4">
         <div className="flex">
           <textarea
-            className="flex-1 p-2 border rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md resize-none"
             placeholder="Type your message..."
-            value={inputValue}
-            onChange={e => setInputValue(e.target.value)}
-            onKeyDown={handleKeyDown}
-            disabled={isLoading}
             rows={2}
+            value={inputMessage}
+            onChange={(e) => setInputMessage(e.target.value)}
+            onKeyPress={handleKeyPress}
+            disabled={isLoading}
           />
           <button
-            className="px-4 py-2 bg-blue-500 text-white rounded-r-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            onClick={() => handleSendMessage(inputValue)}
-            disabled={isLoading || !inputValue.trim()}
+            type="button"
+            className="ml-3 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            onClick={handleSendMessage}
+            disabled={isLoading || !inputMessage.trim()}
           >
-            {isLoading ? '...' : 'Send'}
+            Send
           </button>
         </div>
       </div>
     </div>
   );
-};
-
-export default ChatWidget;
+}

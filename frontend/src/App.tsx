@@ -6,11 +6,9 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import LoginPage from './pages/LoginPage';
-
-// Placeholder components for other pages (to be implemented later)
-const ProjectsPage = () => <div>Projects Page (Coming Soon)</div>;
-const TasksPage = () => <div>Tasks Page (Coming Soon)</div>;
-const TaskDetailPage = () => <div>Task Detail Page (Coming Soon)</div>;
+import ProjectsPage from './pages/ProjectsPage';
+import TasksPage from './pages/TasksPage';
+import TaskDetailPage from './pages/TaskDetailPage';
 
 // Protected route component that redirects to login if not authenticated
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
