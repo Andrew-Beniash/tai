@@ -1,0 +1,15 @@
+{
+  "taskId": "task123",
+  "client": "Acme Corp",
+  "taxForm": "1120",
+  "params": {
+    "client_name": "Acme Corporation",
+    "missing_items": [
+      "Prior year tax returns (2022-2023)",
+      "Business financial statements for Q4 2023",
+      "Inventory valuation report",
+      "Details of capital expenditures exceeding $5,000",
+      "Employee benefit plan documentation"
+    ]
+  }
+}

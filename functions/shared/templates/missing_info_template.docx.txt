@@ -1,13 +1,29 @@
-This is a placeholder for a Word template (docx) file.
+[COMPANY LETTERHEAD]
 
-In a real implementation, this would be a properly formatted .docx template with placeholders for:
+{{ date }}
 
-- Client name: {{ client_name }}
-- Date: {{ date }}
-- Task ID: {{ task_id }}
-- Missing items: {{ missing_items }}
-- Preparer name: {{ preparer_name }}
+{{ client_name }}
+[Client Address Placeholder]
 
-Since we can't create a binary .docx file directly here, you'll need to create a proper Word template with these placeholders and save it as 'missing_info_template.docx' in this directory.
+RE: Missing Information for Tax Filing - Task ID: {{ task_id }}
 
-For the docxtpl library to work, the placeholders should be in the format {{ variable_name }}.
+Dear {{ client_name }},
+
+We are currently preparing your {{ tax_form }} tax filing and have identified several items that are still missing from your submission. To ensure timely and accurate filing, please provide the following information as soon as possible:
+
+{% for item in missing_items %}
+- {{ item }}
+{% endfor %}
+
+Please submit these items at your earliest convenience. If you have any questions or need clarification on any of the requested items, please don't hesitate to contact me directly.
+
+Thank you for your prompt attention to this matter.
+
+Sincerely,
+
+{{ preparer_name }}
+Tax Preparation Services
+[Phone Number Placeholder]
+[Email Placeholder]
+
+[COMPANY FOOTER]
